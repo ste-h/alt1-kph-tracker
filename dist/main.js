@@ -4078,6 +4078,10 @@ output.style.color = "#abb2bf";
 document.body.style.backgroundColor = "#181b1c";
 var startTime = null;
 var killsPerHour = 0;
+function resetStartTime() {
+    startTime = Date.now();
+    updateKillsPerHour();
+}
 function calculateKillsPerHour() {
     if (!startTime || killCount === 0)
         return 0;
@@ -4118,12 +4122,12 @@ function startPeriodicUpdates() {
 function logCompletionTime(minutes, seconds, milliseconds) {
     var totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
     completionTimes.push(totalSeconds);
-    killCount++; // Increment kill counter
+    killCount++; // This will now keep incrementing even if the timer is reset
     var timeString = "".concat(minutes.toString().padStart(2, "0"), ":").concat(seconds
         .toString()
         .padStart(2, "0"), ".").concat(Math.floor(milliseconds / 100));
     console.log("Kill ".concat(killCount, " completed in: ").concat(timeString));
-    updateDisplay(timeString, killCount); // Pass kill count to updateDisplay
+    updateDisplay(timeString, killCount);
     updateAverageTime();
     updateKillsPerHour();
 }
@@ -4133,16 +4137,30 @@ function updateKillsPerHour() {
     if (!kphDiv) {
         kphDiv = document.createElement("div");
         kphDiv.id = "kills-per-hour";
-        kphDiv.style.color = "#61afef"; // Light blue color
-        var averageDiv = document.getElementById("average-time");
-        if (averageDiv) {
+        kphDiv.style.color = "#61afef";
+    }
+    kphDiv.innerHTML = "Kills per hour: ".concat(killsPerHour.toFixed(1), " <button id=\"reset-kph\">Reset</button>");
+    // Style the reset button
+    var resetButton = kphDiv.querySelector("#reset-kph");
+    if (resetButton) {
+        resetButton.style.backgroundColor = "#181b1c";
+        resetButton.style.color = "#DCD9D4";
+        resetButton.style.border = "none";
+        resetButton.style.padding = "2px 5px";
+        resetButton.style.cursor = "pointer";
+        resetButton.style.borderRadius = "3px";
+        resetButton.addEventListener("click", resetStartTime);
+    }
+    // Ensure the kills per hour div is always right after the average time div
+    var averageDiv = document.getElementById("average-time");
+    if (averageDiv) {
+        if (averageDiv.nextSibling !== kphDiv) {
             averageDiv.insertAdjacentElement("afterend", kphDiv);
         }
-        else {
-            output.insertAdjacentElement("afterbegin", kphDiv);
-        }
     }
-    kphDiv.textContent = "Kills per hour: ".concat(killsPerHour.toFixed(2));
+    else {
+        output.insertAdjacentElement("afterbegin", kphDiv);
+    }
 }
 function logDeath() {
     deathCount++;
@@ -4154,6 +4172,17 @@ function updateDeathCount() {
     if (!deathDiv) {
         deathDiv = document.createElement("div");
         deathDiv.id = "death-count";
+        deathDiv.style.color = "#e06c75";
+    }
+    deathDiv.textContent = "Total deaths: ".concat(deathCount);
+    // Insert the death count after the kills per hour div
+    var kphDiv = document.getElementById("kills-per-hour");
+    if (kphDiv) {
+        if (kphDiv.nextSibling !== deathDiv) {
+            kphDiv.insertAdjacentElement("afterend", deathDiv);
+        }
+    }
+    else {
         var averageDiv = document.getElementById("average-time");
         if (averageDiv) {
             averageDiv.insertAdjacentElement("afterend", deathDiv);
@@ -4162,8 +4191,6 @@ function updateDeathCount() {
             output.insertAdjacentElement("afterbegin", deathDiv);
         }
     }
-    deathDiv.textContent = "Total deaths: ".concat(deathCount);
-    deathDiv.style.color = "#e06c75";
 }
 function updateDisplay(timeString, killCount) {
     if (!output)
@@ -4171,10 +4198,10 @@ function updateDisplay(timeString, killCount) {
     var completionDiv = document.createElement("div");
     completionDiv.textContent = "Kill ".concat(killCount, ": ").concat(timeString, " ");
     completionDiv.style.color = "#DCD9D4";
-    // Insert the new completion time after the death count div
-    var deathDiv = document.getElementById("death-count");
-    if (deathDiv) {
-        deathDiv.insertAdjacentElement("afterend", completionDiv);
+    // Insert the new completion time after the kills per hour div
+    var kphDiv = document.getElementById("kills-per-hour");
+    if (kphDiv) {
+        kphDiv.insertAdjacentElement("afterend", completionDiv);
     }
     else {
         var averageDiv = document.getElementById("average-time");
@@ -4185,11 +4212,10 @@ function updateDisplay(timeString, killCount) {
             output.insertAdjacentElement("afterbegin", completionDiv);
         }
     }
-    // Keep only the last 50 completion times
-    while (output.children.length > 52) {
-        // 52 to account for average time and death count divs
-        output.removeChild(output.lastChild);
-    }
+    // Not sure if limiting amt of kill times shown is necessary
+    // while (output.children.length > 53)
+    //   output.removeChild(output.lastChild);
+    // }
 }
 function updateAverageTime() {
     if (completionTimes.length === 0)
@@ -4211,7 +4237,12 @@ function updateAverageTime() {
         averageDiv.style.color = "#5ad23e";
         output.insertAdjacentElement("afterbegin", averageDiv);
     }
+    else {
+        // Ensure the average time div is always at the top
+        output.insertAdjacentElement("afterbegin", averageDiv);
+    }
     averageDiv.textContent = "Avg Kill Time: ".concat(averageTimeString);
+    updateKillsPerHour();
 }
 function readChatbox() {
     if (!window.alt1) {
