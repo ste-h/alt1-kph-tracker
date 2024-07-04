@@ -1,6 +1,6 @@
 {
-	"appName": "kph tracker",
-	"description": "tracks boss kill times",
+	"appName": "Boss Kills Tracker",
+	"description": "Logs encounter completion times",
 	"appUrl": "./index.html",
 	"configUrl": "./appconfig.json",
 	"iconUrl": "./icon.png",

@@ -19,7 +19,7 @@ function resetStartTime() {
 function calculateKillsPerHour() {
   if (!startTime || killCount === 0) return 0;
 
-  const elapsedTimeInHours = (Date.now() - startTime) / 3600000; // Convert milliseconds to hours
+  const elapsedTimeInHours = (Date.now() - startTime) / 3600000;
   return killCount / elapsedTimeInHours;
 }
 
@@ -31,7 +31,7 @@ reader.readargs.colors.push(
 
 let completionTimes = [];
 let deathCount = 0;
-let killCount = 0; // Counter for number of kills
+let killCount = 0;
 let loggedTimestamps = new Set();
 
 function processLine(lineText, timestamp) {
@@ -67,7 +67,7 @@ function startPeriodicUpdates() {
 function logCompletionTime(minutes, seconds, milliseconds) {
   const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
   completionTimes.push(totalSeconds);
-  killCount++; // This will now keep incrementing even if the timer is reset
+  killCount++;
   const timeString = `${minutes.toString().padStart(2, "0")}:${seconds
     .toString()
     .padStart(2, "0")}.${Math.floor(milliseconds / 100)}`;
@@ -100,7 +100,7 @@ function updateKillsPerHour() {
     resetButton.addEventListener("click", resetStartTime);
   }
 
-  // Ensure the kills per hour div is always right after the average time div
+  // Kph div always next to avg kill time div
   const averageDiv = document.getElementById("average-time");
   if (averageDiv) {
     if (averageDiv.nextSibling !== kphDiv) {
@@ -148,7 +148,6 @@ function updateDisplay(timeString, killCount) {
   completionDiv.textContent = `Kill ${killCount}: ${timeString} `;
   completionDiv.style.color = "#DCD9D4";
 
-  // Insert the new completion time after the kills per hour div
   const kphDiv = document.getElementById("kills-per-hour");
   if (kphDiv) {
     kphDiv.insertAdjacentElement("afterend", completionDiv);
@@ -189,7 +188,6 @@ function updateAverageTime() {
     averageDiv.style.color = "#5ad23e";
     output.insertAdjacentElement("afterbegin", averageDiv);
   } else {
-    // Ensure the average time div is always at the top
     output.insertAdjacentElement("afterbegin", averageDiv);
   }
   averageDiv.textContent = `Avg Kill Time: ${averageTimeString}`;

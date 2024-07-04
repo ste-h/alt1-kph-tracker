@@ -4085,7 +4085,7 @@ function resetStartTime() {
 function calculateKillsPerHour() {
     if (!startTime || killCount === 0)
         return 0;
-    var elapsedTimeInHours = (Date.now() - startTime) / 3600000; // Convert milliseconds to hours
+    var elapsedTimeInHours = (Date.now() - startTime) / 3600000;
     return killCount / elapsedTimeInHours;
 }
 var reader = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_3___default())();
@@ -4094,7 +4094,7 @@ alt1__WEBPACK_IMPORTED_MODULE_4__.mixColor(45, 185, 20) // Completion Time 2
 );
 var completionTimes = [];
 var deathCount = 0;
-var killCount = 0; // Counter for number of kills
+var killCount = 0;
 var loggedTimestamps = new Set();
 function processLine(lineText, timestamp) {
     if (lineText.includes("completion time:") &&
@@ -4122,7 +4122,7 @@ function startPeriodicUpdates() {
 function logCompletionTime(minutes, seconds, milliseconds) {
     var totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
     completionTimes.push(totalSeconds);
-    killCount++; // This will now keep incrementing even if the timer is reset
+    killCount++;
     var timeString = "".concat(minutes.toString().padStart(2, "0"), ":").concat(seconds
         .toString()
         .padStart(2, "0"), ".").concat(Math.floor(milliseconds / 100));
@@ -4151,7 +4151,7 @@ function updateKillsPerHour() {
         resetButton.style.borderRadius = "3px";
         resetButton.addEventListener("click", resetStartTime);
     }
-    // Ensure the kills per hour div is always right after the average time div
+    // Kph div always next to avg kill time div
     var averageDiv = document.getElementById("average-time");
     if (averageDiv) {
         if (averageDiv.nextSibling !== kphDiv) {
@@ -4198,7 +4198,6 @@ function updateDisplay(timeString, killCount) {
     var completionDiv = document.createElement("div");
     completionDiv.textContent = "Kill ".concat(killCount, ": ").concat(timeString, " ");
     completionDiv.style.color = "#DCD9D4";
-    // Insert the new completion time after the kills per hour div
     var kphDiv = document.getElementById("kills-per-hour");
     if (kphDiv) {
         kphDiv.insertAdjacentElement("afterend", completionDiv);
@@ -4238,7 +4237,6 @@ function updateAverageTime() {
         output.insertAdjacentElement("afterbegin", averageDiv);
     }
     else {
-        // Ensure the average time div is always at the top
         output.insertAdjacentElement("afterbegin", averageDiv);
     }
     averageDiv.textContent = "Avg Kill Time: ".concat(averageTimeString);
