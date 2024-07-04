@@ -5,6 +5,9 @@ import "./icon.png";
 import ChatBoxReader from "alt1/chatbox";
 
 var output = document.getElementById("output");
+output.style.backgroundColor = "#181b1c"; 
+output.style.color = "#abb2bf"; 
+document.body.style.backgroundColor = "#181b1c"; 
 
 const reader = new ChatBoxReader();
 reader.readargs.colors.push(
@@ -14,6 +17,7 @@ reader.readargs.colors.push(
 
 let completionTimes = [];
 let deathCount = 0;
+let killCount = 0; // Counter for number of kills
 let loggedTimestamps = new Set();
 
 function processLine(lineText, timestamp) {
@@ -43,11 +47,12 @@ function processLine(lineText, timestamp) {
 function logCompletionTime(minutes, seconds, milliseconds) {
   const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
   completionTimes.push(totalSeconds);
+  killCount++; // Increment kill counter
   const timeString = `${minutes.toString().padStart(2, "0")}:${seconds
     .toString()
     .padStart(2, "0")}.${Math.floor(milliseconds / 100)}`;
-  console.log(`Kill completed in: ${timeString}`);
-  updateDisplay(timeString);
+  console.log(`Kill ${killCount} completed in: ${timeString}`);
+  updateDisplay(timeString, killCount); // Pass kill count to updateDisplay
   updateAverageTime();
 }
 
@@ -70,13 +75,15 @@ function updateDeathCount() {
     }
   }
   deathDiv.textContent = `Total deaths: ${deathCount}`;
+  deathDiv.style.color = "#e06c75"; 
 }
 
-function updateDisplay(timeString) {
+function updateDisplay(timeString, killCount) {
   if (!output) return;
 
   const completionDiv = document.createElement("div");
-  completionDiv.textContent = `Latest completion time: ${timeString}`;
+  completionDiv.textContent = `Kill ${killCount}: ${timeString} `;
+  completionDiv.style.color = "#DCD9D4";
 
   // Insert the new completion time after the death count div
   const deathDiv = document.getElementById("death-count");
@@ -105,7 +112,7 @@ function updateAverageTime() {
   const averageSeconds = totalSeconds / completionTimes.length;
   const averageMinutes = Math.floor(averageSeconds / 60);
   const averageRemainingSeconds = Math.floor(averageSeconds % 60);
-  const averageMilliseconds = Math.floor(((averageSeconds % 1) * 1000) / 100); // Calculate milliseconds and convert to one decimal place
+  const averageMilliseconds = Math.floor(((averageSeconds % 1) * 1000) / 100);
 
   const averageTimeString = `${averageMinutes
     .toString()
@@ -117,9 +124,10 @@ function updateAverageTime() {
   if (!averageDiv) {
     averageDiv = document.createElement("div");
     averageDiv.id = "average-time";
+    averageDiv.style.color = "#5ad23e";
     output.insertAdjacentElement("afterbegin", averageDiv);
   }
-  averageDiv.textContent = `Average completion time: ${averageTimeString}`;
+  averageDiv.textContent = `Avg Kill Time: ${averageTimeString}`;
 }
 
 function readChatbox() {

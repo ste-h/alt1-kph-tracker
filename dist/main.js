@@ -4073,12 +4073,16 @@ __webpack_require__.r(__webpack_exports__);
 
 
 var output = document.getElementById("output");
+output.style.backgroundColor = "#181b1c";
+output.style.color = "#abb2bf";
+document.body.style.backgroundColor = "#181b1c";
 var reader = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_3___default())();
 reader.readargs.colors.push(alt1__WEBPACK_IMPORTED_MODULE_4__.mixColor(43, 179, 20), // Completion Time
 alt1__WEBPACK_IMPORTED_MODULE_4__.mixColor(45, 185, 20) // Completion Time 2
 );
 var completionTimes = [];
 var deathCount = 0;
+var killCount = 0; // Counter for number of kills
 var loggedTimestamps = new Set();
 function processLine(lineText, timestamp) {
     if (lineText.includes("completion time:") &&
@@ -4101,11 +4105,12 @@ function processLine(lineText, timestamp) {
 function logCompletionTime(minutes, seconds, milliseconds) {
     var totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
     completionTimes.push(totalSeconds);
+    killCount++; // Increment kill counter
     var timeString = "".concat(minutes.toString().padStart(2, "0"), ":").concat(seconds
         .toString()
         .padStart(2, "0"), ".").concat(Math.floor(milliseconds / 100));
-    console.log("Kill completed in: ".concat(timeString));
-    updateDisplay(timeString);
+    console.log("Kill ".concat(killCount, " completed in: ").concat(timeString));
+    updateDisplay(timeString, killCount); // Pass kill count to updateDisplay
     updateAverageTime();
 }
 function logDeath() {
@@ -4127,12 +4132,14 @@ function updateDeathCount() {
         }
     }
     deathDiv.textContent = "Total deaths: ".concat(deathCount);
+    deathDiv.style.color = "#e06c75";
 }
-function updateDisplay(timeString) {
+function updateDisplay(timeString, killCount) {
     if (!output)
         return;
     var completionDiv = document.createElement("div");
-    completionDiv.textContent = "Latest completion time: ".concat(timeString);
+    completionDiv.textContent = "Kill ".concat(killCount, ": ").concat(timeString, " ");
+    completionDiv.style.color = "#DCD9D4";
     // Insert the new completion time after the death count div
     var deathDiv = document.getElementById("death-count");
     if (deathDiv) {
@@ -4160,7 +4167,7 @@ function updateAverageTime() {
     var averageSeconds = totalSeconds / completionTimes.length;
     var averageMinutes = Math.floor(averageSeconds / 60);
     var averageRemainingSeconds = Math.floor(averageSeconds % 60);
-    var averageMilliseconds = Math.floor(((averageSeconds % 1) * 1000) / 100); // Calculate milliseconds and convert to one decimal place
+    var averageMilliseconds = Math.floor(((averageSeconds % 1) * 1000) / 100);
     var averageTimeString = "".concat(averageMinutes
         .toString()
         .padStart(2, "0"), ":").concat(averageRemainingSeconds
@@ -4170,9 +4177,10 @@ function updateAverageTime() {
     if (!averageDiv) {
         averageDiv = document.createElement("div");
         averageDiv.id = "average-time";
+        averageDiv.style.color = "#5ad23e";
         output.insertAdjacentElement("afterbegin", averageDiv);
     }
-    averageDiv.textContent = "Average completion time: ".concat(averageTimeString);
+    averageDiv.textContent = "Avg Kill Time: ".concat(averageTimeString);
 }
 function readChatbox() {
     if (!window.alt1) {
