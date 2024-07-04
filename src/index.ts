@@ -5,9 +5,19 @@ import "./icon.png";
 import ChatBoxReader from "alt1/chatbox";
 
 var output = document.getElementById("output");
-output.style.backgroundColor = "#181b1c"; 
-output.style.color = "#abb2bf"; 
-document.body.style.backgroundColor = "#181b1c"; 
+output.style.backgroundColor = "#181b1c";
+output.style.color = "#abb2bf";
+document.body.style.backgroundColor = "#181b1c";
+
+let startTime = null;
+let killsPerHour = 0;
+
+function calculateKillsPerHour() {
+  if (!startTime || killCount === 0) return 0;
+
+  const elapsedTimeInHours = (Date.now() - startTime) / 3600000; // Convert milliseconds to hours
+  return killCount / elapsedTimeInHours;
+}
 
 const reader = new ChatBoxReader();
 reader.readargs.colors.push(
@@ -44,6 +54,12 @@ function processLine(lineText, timestamp) {
   }
 }
 
+function startPeriodicUpdates() {
+  setInterval(() => {
+    updateKillsPerHour();
+  }, 600);
+}
+
 function logCompletionTime(minutes, seconds, milliseconds) {
   const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
   completionTimes.push(totalSeconds);
@@ -54,6 +70,25 @@ function logCompletionTime(minutes, seconds, milliseconds) {
   console.log(`Kill ${killCount} completed in: ${timeString}`);
   updateDisplay(timeString, killCount); // Pass kill count to updateDisplay
   updateAverageTime();
+  updateKillsPerHour();
+
+}
+
+function updateKillsPerHour() {
+  killsPerHour = calculateKillsPerHour();
+  let kphDiv = document.getElementById("kills-per-hour");
+  if (!kphDiv) {
+    kphDiv = document.createElement("div");
+    kphDiv.id = "kills-per-hour";
+    kphDiv.style.color = "#61afef"; // Light blue color
+    const averageDiv = document.getElementById("average-time");
+    if (averageDiv) {
+      averageDiv.insertAdjacentElement("afterend", kphDiv);
+    } else {
+      output.insertAdjacentElement("afterbegin", kphDiv);
+    }
+  }
+  kphDiv.textContent = `Kills per hour: ${killsPerHour.toFixed(2)}`;
 }
 
 function logDeath() {
@@ -75,7 +110,7 @@ function updateDeathCount() {
     }
   }
   deathDiv.textContent = `Total deaths: ${deathCount}`;
-  deathDiv.style.color = "#e06c75"; 
+  deathDiv.style.color = "#e06c75";
 }
 
 function updateDisplay(timeString, killCount) {
@@ -162,9 +197,11 @@ function readChatbox() {
 }
 
 function main() {
+  startTime = Date.now();
   if (window.alt1) {
     alt1.identifyAppUrl("./appconfig.json");
     readChatbox();
+    startPeriodicUpdates();
   } else {
     let addappurl = `alt1://addapp/${
       new URL("./appconfig.json", document.location.href).href
@@ -175,7 +212,6 @@ function main() {
     );
   }
 }
-
 document.addEventListener("DOMContentLoaded", () => {
   main();
 });

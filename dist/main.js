@@ -4076,6 +4076,14 @@ var output = document.getElementById("output");
 output.style.backgroundColor = "#181b1c";
 output.style.color = "#abb2bf";
 document.body.style.backgroundColor = "#181b1c";
+var startTime = null;
+var killsPerHour = 0;
+function calculateKillsPerHour() {
+    if (!startTime || killCount === 0)
+        return 0;
+    var elapsedTimeInHours = (Date.now() - startTime) / 3600000; // Convert milliseconds to hours
+    return killCount / elapsedTimeInHours;
+}
 var reader = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_3___default())();
 reader.readargs.colors.push(alt1__WEBPACK_IMPORTED_MODULE_4__.mixColor(43, 179, 20), // Completion Time
 alt1__WEBPACK_IMPORTED_MODULE_4__.mixColor(45, 185, 20) // Completion Time 2
@@ -4102,6 +4110,11 @@ function processLine(lineText, timestamp) {
         logDeath();
     }
 }
+function startPeriodicUpdates() {
+    setInterval(function () {
+        updateKillsPerHour();
+    }, 600);
+}
 function logCompletionTime(minutes, seconds, milliseconds) {
     var totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
     completionTimes.push(totalSeconds);
@@ -4112,6 +4125,24 @@ function logCompletionTime(minutes, seconds, milliseconds) {
     console.log("Kill ".concat(killCount, " completed in: ").concat(timeString));
     updateDisplay(timeString, killCount); // Pass kill count to updateDisplay
     updateAverageTime();
+    updateKillsPerHour();
+}
+function updateKillsPerHour() {
+    killsPerHour = calculateKillsPerHour();
+    var kphDiv = document.getElementById("kills-per-hour");
+    if (!kphDiv) {
+        kphDiv = document.createElement("div");
+        kphDiv.id = "kills-per-hour";
+        kphDiv.style.color = "#61afef"; // Light blue color
+        var averageDiv = document.getElementById("average-time");
+        if (averageDiv) {
+            averageDiv.insertAdjacentElement("afterend", kphDiv);
+        }
+        else {
+            output.insertAdjacentElement("afterbegin", kphDiv);
+        }
+    }
+    kphDiv.textContent = "Kills per hour: ".concat(killsPerHour.toFixed(2));
 }
 function logDeath() {
     deathCount++;
@@ -4212,9 +4243,11 @@ function readChatbox() {
     }, alt1.captureInterval);
 }
 function main() {
+    startTime = Date.now();
     if (window.alt1) {
         alt1.identifyAppUrl("./appconfig.json");
         readChatbox();
+        startPeriodicUpdates();
     }
     else {
         var addappurl = "alt1://addapp/".concat(new URL("./appconfig.json", document.location.href).href);
