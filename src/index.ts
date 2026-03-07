@@ -5,16 +5,60 @@ import "./icon.png";
 import ChatBoxReader from "alt1/chatbox";
 
 var output = document.getElementById("output");
-output.style.backgroundColor = "#181b1c";
-output.style.color = "#abb2bf";
-document.body.style.backgroundColor = "#181b1c";
+output.style.backgroundColor = "#1a1410";
+output.style.color = "#c8b898";
+output.style.padding = "6px";
+output.style.fontFamily = "Segoe UI, sans-serif";
+document.body.style.backgroundColor = "#1a1410";
+document.body.style.margin = "0";
 
-let startTime = null;
+function styleButton(btn: HTMLButtonElement) {
+  btn.style.backgroundColor = "#6a7d8f";
+  btn.style.color = "#d8d0c4";
+  btn.style.border = "1px solid #506070";
+  btn.style.padding = "2px 6px";
+  btn.style.cursor = "pointer";
+  btn.style.borderRadius = "2px";
+  btn.style.fontSize = "11px";
+}
+
+let startTime: number | null = null;
+let sessionStarted = false;
 let killsPerHour = 0;
 
-function resetStartTime() {
-  startTime = Date.now();
-  updateKillsPerHour();
+function formatElapsed(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
+function updateTimerDisplay() {
+  if (!startTime) return;
+  let timerDiv = document.getElementById("timer-info");
+  if (!timerDiv) {
+    timerDiv = document.createElement("div");
+    timerDiv.id = "timer-info";
+    timerDiv.style.color = "#a08050";
+    timerDiv.style.marginBottom = "4px";
+    timerDiv.style.borderBottom = "1px solid #5c4a28";
+    timerDiv.style.paddingBottom = "4px";
+    output.insertAdjacentElement("afterbegin", timerDiv);
+  }
+  const startDate = new Date(startTime);
+  const startStr = startDate.toLocaleTimeString([], { hour12: false });
+  const elapsed = formatElapsed(Date.now() - startTime);
+  timerDiv.innerHTML = `Started: ${startStr} | Running: ${elapsed} <button id="export-btn">Export</button>`;
+
+  const exportBtn = timerDiv.querySelector("#export-btn") as HTMLButtonElement;
+  if (exportBtn) {
+    styleButton(exportBtn);
+    exportBtn.style.marginLeft = "8px";
+    exportBtn.addEventListener("click", exportLog);
+  }
 }
 function calculateKillsPerHour() {
   if (!startTime || killCount === 0) return 0;
@@ -29,10 +73,17 @@ reader.readargs.colors.push(
   a1lib.mixColor(45, 185, 20) // Completion Time 2
 );
 
-let completionTimes = [];
+let completionTimes: number[] = [];
 let deathCount = 0;
 let killCount = 0;
 let loggedTimestamps = new Set();
+
+function formatSeconds(t: number): string {
+  const m = Math.floor(t / 60);
+  const s = Math.floor(t % 60);
+  const ms = Math.floor(((t % 1) * 1000) / 100);
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
+}
 
 function processLine(lineText, timestamp) {
   if (
@@ -61,11 +112,20 @@ function processLine(lineText, timestamp) {
 function startPeriodicUpdates() {
   setInterval(() => {
     updateKillsPerHour();
+    updateTimerDisplay();
   }, 600);
 }
 
 function logCompletionTime(minutes, seconds, milliseconds) {
   const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
+
+  if (!sessionStarted) {
+    sessionStarted = true;
+    const killDurationMs = totalSeconds * 1000;
+    startTime = Date.now() - killDurationMs;
+    updateTimerDisplay();
+  }
+
   completionTimes.push(totalSeconds);
   killCount++;
   const timeString = `${minutes.toString().padStart(2, "0")}:${seconds
@@ -75,6 +135,8 @@ function logCompletionTime(minutes, seconds, milliseconds) {
   updateDisplay(timeString, killCount);
   updateAverageTime();
   updateKillsPerHour();
+  updateBestWorst();
+  updateKillCount();
 }
 
 function updateKillsPerHour() {
@@ -83,22 +145,9 @@ function updateKillsPerHour() {
   if (!kphDiv) {
     kphDiv = document.createElement("div");
     kphDiv.id = "kills-per-hour";
-    (kphDiv as HTMLElement).style.color = "#61afef";
+    (kphDiv as HTMLElement).style.color = "#6a9fc8";
   }
-  kphDiv.innerHTML = `Kills per hour: ${killsPerHour.toFixed(1)} <button id="reset-kph">Reset</button>`;
-
-  // Style the reset button
-  const resetButton = kphDiv.querySelector("#reset-kph") as HTMLButtonElement;
-  if (resetButton) {
-    resetButton.style.backgroundColor = "#181b1c"; 
-    resetButton.style.color = "#DCD9D4"; 
-    resetButton.style.border = "none";
-    resetButton.style.padding = "2px 5px";
-    resetButton.style.cursor = "pointer";
-    resetButton.style.borderRadius = "3px";
-
-    resetButton.addEventListener("click", resetStartTime);
-  }
+  kphDiv.textContent = `Kills per hour: ${killsPerHour.toFixed(1)}`;
 
   // Kph div always next to avg kill time div
   const averageDiv = document.getElementById("average-time");
@@ -122,7 +171,7 @@ function updateDeathCount() {
   if (!deathDiv) {
     deathDiv = document.createElement("div");
     deathDiv.id = "death-count";
-    deathDiv.style.color = "#e06c75";
+    deathDiv.style.color = "#c04040";
   }
   deathDiv.textContent = `Total deaths: ${deathCount}`;
 
@@ -141,29 +190,130 @@ function updateDeathCount() {
     }
   }
 }
-function updateDisplay(timeString, killCount) {
-  if (!output) return;
+function updateBestWorst() {
+  let bestWorstDiv = document.getElementById("best-worst");
+  if (completionTimes.length === 0) {
+    if (bestWorstDiv) bestWorstDiv.remove();
+    return;
+  }
+  if (!bestWorstDiv) {
+    bestWorstDiv = document.createElement("div");
+    bestWorstDiv.id = "best-worst";
+    bestWorstDiv.style.color = "#b080d0";
+  }
+  const best = Math.min(...completionTimes);
+  const worst = Math.max(...completionTimes);
+  bestWorstDiv.textContent = `Best: ${formatSeconds(best)} | Worst: ${formatSeconds(worst)}`;
 
-  const completionDiv = document.createElement("div");
-  completionDiv.textContent = `Kill ${killCount}: ${timeString} `;
-  completionDiv.style.color = "#DCD9D4";
-
-  const kphDiv = document.getElementById("kills-per-hour");
-  if (kphDiv) {
-    kphDiv.insertAdjacentElement("afterend", completionDiv);
+  const avgDiv = document.getElementById("average-time");
+  if (avgDiv) {
+    if (avgDiv.nextSibling !== bestWorstDiv) {
+      avgDiv.insertAdjacentElement("afterend", bestWorstDiv);
+    }
   } else {
-    const averageDiv = document.getElementById("average-time");
-    if (averageDiv) {
-      averageDiv.insertAdjacentElement("afterend", completionDiv);
+    output.insertAdjacentElement("afterbegin", bestWorstDiv);
+  }
+}
+
+function updateKillCount() {
+  let kcDiv = document.getElementById("kill-count");
+  if (!kcDiv) {
+    kcDiv = document.createElement("div");
+    kcDiv.id = "kill-count";
+    kcDiv.style.color = "#d4a830";
+  }
+  kcDiv.textContent = `Kills: ${killCount}`;
+
+  const deathDiv = document.getElementById("death-count");
+  if (deathDiv) {
+    if (deathDiv.nextSibling !== kcDiv) {
+      deathDiv.insertAdjacentElement("afterend", kcDiv);
+    }
+  } else {
+    const kphDiv = document.getElementById("kills-per-hour");
+    if (kphDiv) {
+      kphDiv.insertAdjacentElement("afterend", kcDiv);
     } else {
-      output.insertAdjacentElement("afterbegin", completionDiv);
+      output.insertAdjacentElement("afterbegin", kcDiv);
     }
   }
+}
 
-  // Not sure if limiting amt of kill times shown is necessary
-  // while (output.children.length > 53)
-  //   output.removeChild(output.lastChild);
-  // }
+function removeKill(index: number) {
+  completionTimes.splice(index, 1);
+  killCount--;
+  renumberKills();
+  updateAverageTime();
+  updateKillsPerHour();
+  updateBestWorst();
+  updateKillCount();
+}
+
+function getKillScroll(): HTMLDivElement {
+  let container = document.getElementById("kill-scroll") as HTMLDivElement;
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "kill-scroll";
+    container.style.maxHeight = "200px";
+    container.style.overflowY = "auto";
+    container.style.marginTop = "4px";
+    container.style.backgroundColor = "#241e14";
+    container.style.border = "1px solid #5c4a28";
+    container.style.borderRadius = "2px";
+    container.style.padding = "4px";
+    output.appendChild(container);
+  }
+  return container;
+}
+
+function renumberKills() {
+  const container = getKillScroll();
+  const killDivs = container.querySelectorAll(".kill-entry");
+  killDivs.forEach((div, i) => {
+    const span = div.querySelector(".kill-text") as HTMLSpanElement;
+    if (span) {
+      const timeStr = span.textContent.replace(/^Kill \d+: /, "");
+      span.textContent = `Kill ${i + 1}: ${timeStr}`;
+    }
+  });
+}
+
+function updateDisplay(timeString: string, killNumber: number) {
+  if (!output) return;
+
+  const container = getKillScroll();
+
+  const completionDiv = document.createElement("div");
+  completionDiv.className = "kill-entry";
+  completionDiv.style.color = "#c8b898";
+
+  const textSpan = document.createElement("span");
+  textSpan.className = "kill-text";
+  textSpan.textContent = `Kill ${killNumber}: ${timeString} `;
+  completionDiv.appendChild(textSpan);
+
+  const removeBtn = document.createElement("button");
+  removeBtn.textContent = "X";
+  removeBtn.style.backgroundColor = "#3a2a1a";
+  removeBtn.style.color = "#c04040";
+  removeBtn.style.border = "1px solid #5c4a28";
+  removeBtn.style.padding = "0px 3px";
+  removeBtn.style.cursor = "pointer";
+  removeBtn.style.borderRadius = "2px";
+  removeBtn.style.fontSize = "10px";
+  removeBtn.style.marginLeft = "4px";
+  removeBtn.addEventListener("click", () => {
+    const allKills = Array.from(container.querySelectorAll(".kill-entry"));
+    const idx = allKills.indexOf(completionDiv);
+    if (idx !== -1) {
+      completionDiv.remove();
+      removeKill(idx);
+    }
+  });
+  completionDiv.appendChild(removeBtn);
+
+  container.appendChild(completionDiv);
+  container.scrollTop = container.scrollHeight;
 }
 
 function updateAverageTime() {
@@ -171,21 +321,13 @@ function updateAverageTime() {
 
   const totalSeconds = completionTimes.reduce((acc, cur) => acc + cur, 0);
   const averageSeconds = totalSeconds / completionTimes.length;
-  const averageMinutes = Math.floor(averageSeconds / 60);
-  const averageRemainingSeconds = Math.floor(averageSeconds % 60);
-  const averageMilliseconds = Math.floor(((averageSeconds % 1) * 1000) / 100);
-
-  const averageTimeString = `${averageMinutes
-    .toString()
-    .padStart(2, "0")}:${averageRemainingSeconds
-    .toString()
-    .padStart(2, "0")}.${averageMilliseconds}`;
+  const averageTimeString = formatSeconds(averageSeconds);
 
   let averageDiv = document.getElementById("average-time");
   if (!averageDiv) {
     averageDiv = document.createElement("div");
     averageDiv.id = "average-time";
-    averageDiv.style.color = "#5ad23e";
+    averageDiv.style.color = "#3aad2b";
     output.insertAdjacentElement("afterbegin", averageDiv);
   } else {
     output.insertAdjacentElement("afterbegin", averageDiv);
@@ -193,6 +335,48 @@ function updateAverageTime() {
   averageDiv.textContent = `Avg Kill Time: ${averageTimeString}`;
 
   updateKillsPerHour();
+}
+
+function exportLog() {
+  const now = new Date();
+  const exportTime = now.toLocaleString();
+  const startDate = startTime ? new Date(startTime).toLocaleString() : "N/A";
+  const duration = startTime ? formatElapsed(Date.now() - startTime) : "N/A";
+
+  const avgSeconds = completionTimes.length > 0
+    ? completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length
+    : 0;
+  const avgStr = formatSeconds(avgSeconds);
+
+  let lines = [
+    `KPH Tracker Export`,
+    `Exported: ${exportTime}`,
+    `Session start: ${startDate}`,
+    `Session duration: ${duration}`,
+    ``,
+    `Kills: ${killCount}`,
+    `Deaths: ${deathCount}`,
+    `Average kill time: ${avgStr}`,
+    `Kills per hour: ${killsPerHour.toFixed(1)}`,
+    ...(completionTimes.length > 0 ? [
+      `Best kill: ${formatSeconds(Math.min(...completionTimes))}`,
+      `Worst kill: ${formatSeconds(Math.max(...completionTimes))}`,
+    ] : []),
+    ``,
+    `--- Kill Log ---`,
+  ];
+
+  completionTimes.forEach((t, i) => {
+    lines.push(`Kill ${i + 1}: ${formatSeconds(t)}`);
+  });
+
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `kph-log-${now.toISOString().slice(0, 10)}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function readChatbox() {
@@ -203,33 +387,56 @@ function readChatbox() {
 
   setInterval(() => {
     if (!reader.pos) {
+      console.log("Chatbox not found, searching...");
       try {
         reader.find();
       } catch (e) {
-        console.warn(e);
+        console.warn("Error finding chatbox:", e);
+        return;
+      }
+      if (reader.pos) {
+        console.log("Chatbox found at", reader.pos);
+      } else {
+        console.log("Chatbox not found");
         return;
       }
     }
 
     let lines = reader.read();
     if (!lines) {
+      console.log("No lines read");
       return;
     }
 
+    console.log(`Read ${lines.length} lines`);
     for (let line of lines) {
       const timestampMatch = line.text.match(/\[(\d{2}:\d{2}:\d{2})\]/);
       const timestamp = timestampMatch ? timestampMatch[1] : "";
-      console.log("detected text", line.text);
+      console.log("Chat line:", line.text);
       let lineText = line.text.toLowerCase();
       processLine(lineText, timestamp);
     }
   }, alt1.captureInterval);
 }
 
+function showWaitingMessage() {
+  let timerDiv = document.getElementById("timer-info");
+  if (!timerDiv) {
+    timerDiv = document.createElement("div");
+    timerDiv.id = "timer-info";
+    timerDiv.style.color = "#a08050";
+    timerDiv.style.marginBottom = "4px";
+    timerDiv.style.borderBottom = "1px solid #5c4a28";
+    timerDiv.style.paddingBottom = "4px";
+    output.insertAdjacentElement("afterbegin", timerDiv);
+  }
+  timerDiv.textContent = "Waiting for first kill...";
+}
+
 function main() {
-  startTime = Date.now();
   if (window.alt1) {
     alt1.identifyAppUrl("./appconfig.json");
+    showWaitingMessage();
     readChatbox();
     startPeriodicUpdates();
   } else {
