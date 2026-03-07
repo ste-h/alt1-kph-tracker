@@ -25,6 +25,7 @@ function styleButton(btn: HTMLButtonElement) {
 let startTime: number | null = null;
 let sessionStarted = false;
 let killsPerHour = 0;
+let appOpenedTime: string | null = null;
 
 function formatElapsed(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -85,7 +86,14 @@ function formatSeconds(t: number): string {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
 }
 
+function isBeforeAppOpened(timestamp: string): boolean {
+  if (!appOpenedTime || !timestamp) return false;
+  return timestamp <= appOpenedTime;
+}
+
 function processLine(lineText, timestamp) {
+  if (isBeforeAppOpened(timestamp)) return;
+
   if (
     lineText.includes("completion time:") &&
     !loggedTimestamps.has(timestamp)
@@ -436,6 +444,8 @@ function showWaitingMessage() {
 function main() {
   if (window.alt1) {
     alt1.identifyAppUrl("./appconfig.json");
+    const now = new Date();
+    appOpenedTime = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     showWaitingMessage();
     readChatbox();
     startPeriodicUpdates();
