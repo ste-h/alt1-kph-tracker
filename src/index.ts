@@ -393,37 +393,21 @@ function readChatbox() {
     return;
   }
 
-  let failedReadCount = 0;
-
   setInterval(() => {
     if (!reader.pos) {
-      console.log("Chatbox not found, searching...");
       try {
         reader.find();
       } catch (e) {
-        console.warn("Error finding chatbox:", e);
         return;
       }
-      if (reader.pos) {
-        console.log("Chatbox found at", reader.pos);
-        failedReadCount = 0;
-      } else {
-        console.log("Chatbox not found");
-        return;
-      }
+      if (!reader.pos) return;
+      console.log("Chatbox found at", reader.pos);
+      reader.read(); // baseline read — discard to establish initial state
+      return;
     }
 
     let lines = reader.read();
-    if (!lines || lines.length === 0) {
-      failedReadCount++;
-      if (failedReadCount > 10) {
-        console.log("Too many failed reads, re-searching for chatbox...");
-        reader.pos = null;
-        failedReadCount = 0;
-      }
-      return;
-    }
-    failedReadCount = 0;
+    if (!lines || lines.length === 0) return;
 
     console.log(`Read ${lines.length} lines`);
     for (let line of lines) {
