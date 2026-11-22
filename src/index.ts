@@ -2,7 +2,7 @@ import * as a1lib from "alt1";
 import "./index.html";
 import "./appconfig.json";
 import "./icon.png";
-import ChatBoxReader from "alt1/chatbox";
+import ChatBoxReader, { Chatbox, ChatLine } from "alt1/chatbox";
 
 var output = document.getElementById("output");
 output.style.backgroundColor = "#1a1410";
@@ -23,9 +23,7 @@ function styleButton(btn: HTMLButtonElement) {
 }
 
 let startTime: number | null = null;
-let sessionStarted = false;
 let killsPerHour = 0;
-let appOpenedTime: string | null = null;
 
 function formatElapsed(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
@@ -68,52 +66,50 @@ function calculateKillsPerHour() {
   return killCount / elapsedTimeInHours;
 }
 
-const reader = new ChatBoxReader();
-reader.readargs.colors.push(
+const completionColors = [
   a1lib.mixColor(43, 179, 20), // Completion Time
   a1lib.mixColor(45, 185, 20) // Completion Time 2
-);
+];
 
-let completionTimes: number[] = [];
+const killTimesTenths: number[] = [];
 let deathCount = 0;
 let killCount = 0;
-let loggedTimestamps = new Set();
+const recentEvents = new Map<string, number>();
 
-function formatSeconds(t: number): string {
-  const m = Math.floor(t / 60);
-  const s = Math.floor(t % 60);
-  const ms = Math.floor(((t % 1) * 1000) / 100);
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}.${ms}`;
+function formatTenths(tenths: number): string {
+  const minutes = Math.floor(tenths / 600);
+  const seconds = Math.floor(tenths / 10) % 60;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}.${tenths % 10}`;
 }
 
-function isBeforeAppOpened(timestamp: string): boolean {
-  if (!appOpenedTime || !timestamp) return false;
-  return timestamp <= appOpenedTime;
+function averageTime(): string {
+  const total = killTimesTenths.reduce((sum, time) => sum + time, 0);
+  return formatTenths(killCount ? Math.floor(total / killCount) : 0);
 }
 
-function processLine(lineText, timestamp) {
-  if (isBeforeAppOpened(timestamp)) return;
+function processLine(text: string, baseline: boolean) {
+  const time = text.match(/completion time:\s*(\d+):(\d+)(?:\.(\d))?/i);
+  const tenths = time ? (Number(time[1]) * 60 + Number(time[2])) * 10 + Number(time[3] || 0) : null;
+  if (tenths === null && !/oh dear, you are dead!/i.test(text)) return;
 
-  if (
-    lineText.includes("completion time:") &&
-    !loggedTimestamps.has(timestamp)
-  ) {
-    loggedTimestamps.add(timestamp);
-    const timeMatch = lineText.match(
-      /completion time:\s*(\d+):(\d+)(?:\.(\d{1}))?/i
-    );
-    if (timeMatch) {
-      const minutes = parseInt(timeMatch[1]);
-      const seconds = parseInt(timeMatch[2]);
-      const milliseconds = timeMatch[3] ? parseInt(timeMatch[3]) * 100 : 0;
-      logCompletionTime(minutes, seconds, milliseconds);
-    }
-  } else if (
-    lineText.includes("oh dear, you are dead!") &&
-    !loggedTimestamps.has(timestamp)
-  ) {
-    loggedTimestamps.add(timestamp);
+  // Alt1 already returns new lines by overlap when there is no readable timestamp.
+  const timestamp = text.match(/\[(\d{2}:\d{2}:\d{2})\]/);
+  if (timestamp) {
+    const key = `${timestamp[1]}:${tenths === null ? "death" : tenths}`;
+    const now = Date.now();
+    // Chat timestamps repeat daily. Only retain recent events for OCR replays.
+    recentEvents.forEach((seen, event) => {
+      if (now - seen >= 12 * 60 * 60 * 1000) recentEvents.delete(event);
+    });
+    if (recentEvents.has(key)) return;
+    recentEvents.set(key, now);
+  }
+
+  if (baseline) return;
+  if (tenths === null) {
     logDeath();
+  } else {
+    logCompletionTime(tenths);
   }
 }
 
@@ -124,21 +120,15 @@ function startPeriodicUpdates() {
   }, 600);
 }
 
-function logCompletionTime(minutes, seconds, milliseconds) {
-  const totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
-
-  if (!sessionStarted) {
-    sessionStarted = true;
-    const killDurationMs = totalSeconds * 1000;
-    startTime = Date.now() - killDurationMs;
+function logCompletionTime(tenths: number) {
+  if (startTime === null) {
+    startTime = Date.now() - tenths * 100;
     updateTimerDisplay();
   }
 
-  completionTimes.push(totalSeconds);
+  killTimesTenths.push(tenths);
   killCount++;
-  const timeString = `${minutes.toString().padStart(2, "0")}:${seconds
-    .toString()
-    .padStart(2, "0")}.${Math.floor(milliseconds / 100)}`;
+  const timeString = formatTenths(tenths);
   console.log(`Kill ${killCount} completed in: ${timeString}`);
   updateDisplay(timeString, killCount);
   updateAverageTime();
@@ -200,7 +190,7 @@ function updateDeathCount() {
 }
 function updateBestWorst() {
   let bestWorstDiv = document.getElementById("best-worst");
-  if (completionTimes.length === 0) {
+  if (killTimesTenths.length === 0) {
     if (bestWorstDiv) bestWorstDiv.remove();
     return;
   }
@@ -209,9 +199,9 @@ function updateBestWorst() {
     bestWorstDiv.id = "best-worst";
     bestWorstDiv.style.color = "#b080d0";
   }
-  const best = Math.min(...completionTimes);
-  const worst = Math.max(...completionTimes);
-  bestWorstDiv.textContent = `Best: ${formatSeconds(best)} | Worst: ${formatSeconds(worst)}`;
+  const best = Math.min(...killTimesTenths);
+  const worst = Math.max(...killTimesTenths);
+  bestWorstDiv.textContent = `Best: ${formatTenths(best)} | Worst: ${formatTenths(worst)}`;
 
   const avgDiv = document.getElementById("average-time");
   if (avgDiv) {
@@ -248,7 +238,7 @@ function updateKillCount() {
 }
 
 function removeKill(index: number) {
-  completionTimes.splice(index, 1);
+  killTimesTenths.splice(index, 1);
   killCount--;
   renumberKills();
   updateAverageTime();
@@ -325,13 +315,11 @@ function updateDisplay(timeString: string, killNumber: number) {
 }
 
 function updateAverageTime() {
-  if (completionTimes.length === 0) return;
-
-  const totalSeconds = completionTimes.reduce((acc, cur) => acc + cur, 0);
-  const averageSeconds = totalSeconds / completionTimes.length;
-  const averageTimeString = formatSeconds(averageSeconds);
-
   let averageDiv = document.getElementById("average-time");
+  if (killTimesTenths.length === 0) {
+    averageDiv?.remove();
+    return;
+  }
   if (!averageDiv) {
     averageDiv = document.createElement("div");
     averageDiv.id = "average-time";
@@ -340,7 +328,7 @@ function updateAverageTime() {
   } else {
     output.insertAdjacentElement("afterbegin", averageDiv);
   }
-  averageDiv.textContent = `Avg Kill Time: ${averageTimeString}`;
+  averageDiv.textContent = `Avg Kill Time: ${averageTime()}`;
 
   updateKillsPerHour();
 }
@@ -351,11 +339,6 @@ function exportLog() {
   const startDate = startTime ? new Date(startTime).toLocaleString() : "N/A";
   const duration = startTime ? formatElapsed(Date.now() - startTime) : "N/A";
 
-  const avgSeconds = completionTimes.length > 0
-    ? completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length
-    : 0;
-  const avgStr = formatSeconds(avgSeconds);
-
   let lines = [
     `KPH Tracker Export`,
     `Exported: ${exportTime}`,
@@ -364,18 +347,18 @@ function exportLog() {
     ``,
     `Kills: ${killCount}`,
     `Deaths: ${deathCount}`,
-    `Average kill time: ${avgStr}`,
+    `Average kill time: ${averageTime()}`,
     `Kills per hour: ${killsPerHour.toFixed(1)}`,
-    ...(completionTimes.length > 0 ? [
-      `Best kill: ${formatSeconds(Math.min(...completionTimes))}`,
-      `Worst kill: ${formatSeconds(Math.max(...completionTimes))}`,
+    ...(killTimesTenths.length > 0 ? [
+      `Best kill: ${formatTenths(Math.min(...killTimesTenths))}`,
+      `Worst kill: ${formatTenths(Math.max(...killTimesTenths))}`,
     ] : []),
     ``,
     `--- Kill Log ---`,
   ];
 
-  completionTimes.forEach((t, i) => {
-    lines.push(`Kill ${i + 1}: ${formatSeconds(t)}`);
+  killTimesTenths.forEach((tenths, i) => {
+    lines.push(`Kill ${i + 1}: ${formatTenths(tenths)}`);
   });
 
   const blob = new Blob([lines.join("\n")], { type: "text/plain" });
@@ -387,36 +370,61 @@ function exportLog() {
   URL.revokeObjectURL(url);
 }
 
-function readChatbox() {
-  if (!window.alt1) {
-    console.log("Alt1 not detected");
-    return;
-  }
+function sameChatbox(a: Chatbox, b: Chatbox): boolean {
+  // Alt1 can refine rect.x while reading text. The detected corners stay fixed.
+  return a.type === b.type &&
+    a.botleft.x === b.botleft.x && a.botleft.y === b.botleft.y &&
+    a.topright.x === b.topright.x && a.topright.y === b.topright.y;
+}
 
+function firstNewLine(reader: ChatBoxReader, lines: ChatLine[], previousTail: ChatLine[]): number {
+  // A fresh reader returns the whole box. Resume after the last known lines
+  // if they are still visible; otherwise treat this first snapshot as history.
+  if (previousTail.length >= reader.minoverlap) {
+    for (let end = lines.length; end >= previousTail.length; end--) {
+      const start = end - previousTail.length;
+      if (previousTail.every((line, i) => reader.matchLines(line.text, lines[start + i].text))) return end;
+    }
+  }
+  return lines.length;
+}
+
+function readChatbox() {
+  let reader: ChatBoxReader | null = null;
+  let previousTail: ChatLine[] = [];
+  let nextSearchAt = 0;
+  let needsBaseline = true;
   setInterval(() => {
-    if (!reader.pos) {
-      try {
-        reader.find();
-      } catch (e) {
-        return;
+    let lines: ChatLine[] | null;
+    try {
+      const now = Date.now();
+      if (now >= nextSearchAt) {
+        nextSearchAt = now + 5000;
+        const candidate = new ChatBoxReader();
+        const found = candidate.find();
+        if (!found) {
+          reader = null;
+          return;
+        }
+        if (!reader || !sameChatbox(reader.pos.mainbox, found.mainbox)) {
+          reader = candidate;
+          reader.readargs.colors.push(...completionColors);
+          needsBaseline = true;
+        }
       }
-      if (!reader.pos) return;
-      console.log("Chatbox found at", reader.pos);
-      reader.read(); // baseline read — discard to establish initial state
+      if (!reader) return;
+      lines = reader.read();
+    } catch (error) {
+      console.warn("Could not capture chatbox", error);
+      reader = null;
       return;
     }
 
-    let lines = reader.read();
-    if (!lines || lines.length === 0) return;
-
-    console.log(`Read ${lines.length} lines`);
-    for (let line of lines) {
-      const timestampMatch = line.text.match(/\[(\d{2}:\d{2}:\d{2})\]/);
-      const timestamp = timestampMatch ? timestampMatch[1] : "";
-      console.log("Chat line:", line.text);
-      let lineText = line.text.toLowerCase();
-      processLine(lineText, timestamp);
-    }
+    if (!lines) return; // Font detection can take more than one capture.
+    const start = needsBaseline ? firstNewLine(reader, lines, previousTail) : 0;
+    lines.forEach((line, i) => processLine(line.text, i < start));
+    needsBaseline = false;
+    if (lines.some(line => line.text.trim())) previousTail = reader.overlaplines.slice();
   }, alt1.captureInterval);
 }
 
@@ -437,8 +445,6 @@ function showWaitingMessage() {
 function main() {
   if (window.alt1) {
     alt1.identifyAppUrl("./appconfig.json");
-    const now = new Date();
-    appOpenedTime = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
     showWaitingMessage();
     readChatbox();
     startPeriodicUpdates();

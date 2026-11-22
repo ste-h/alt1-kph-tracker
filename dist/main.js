@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory((function webpackLoadOptionalExternalModule() { try { return require("sharp"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("canvas"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("electron/common"); } catch(e) {} }()));
+		module.exports = factory((function webpackLoadOptionalExternalModule() { try { return require("canvas"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("electron/common"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("sharp"); } catch(e) {} }()));
 	else if(typeof define === 'function' && define.amd)
-		define(["sharp", "canvas", "electron/common"], factory);
+		define(["canvas", "electron/common", "sharp"], factory);
 	else if(typeof exports === 'object')
-		exports["TestApp"] = factory((function webpackLoadOptionalExternalModule() { try { return require("sharp"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("canvas"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("electron/common"); } catch(e) {} }()));
+		exports["TestApp"] = factory((function webpackLoadOptionalExternalModule() { try { return require("canvas"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("electron/common"); } catch(e) {} }()), (function webpackLoadOptionalExternalModule() { try { return require("sharp"); } catch(e) {} }()));
 	else
-		root["TestApp"] = factory(root["sharp"], root["canvas"], root["electron/common"]);
-})(self, (__WEBPACK_EXTERNAL_MODULE_sharp__, __WEBPACK_EXTERNAL_MODULE_canvas__, __WEBPACK_EXTERNAL_MODULE_electron_common__) => {
+		root["TestApp"] = factory(root["canvas"], root["electron/common"], root["sharp"]);
+})(self, (__WEBPACK_EXTERNAL_MODULE_canvas__, __WEBPACK_EXTERNAL_MODULE_electron_common__, __WEBPACK_EXTERNAL_MODULE_sharp__) => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
@@ -51,7 +51,7 @@ module.exports = __webpack_require__.p + "index.html";
 (module) {
 
 "use strict";
-if(typeof __WEBPACK_EXTERNAL_MODULE_canvas__ === 'undefined') { var e = new Error("Cannot find module 'canvas'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
+if(typeof __WEBPACK_EXTERNAL_MODULE_canvas__ === 'undefined') { const e = new Error("Cannot find module 'canvas'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
 
 module.exports = __WEBPACK_EXTERNAL_MODULE_canvas__;
 
@@ -64,7 +64,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_canvas__;
 (module) {
 
 "use strict";
-if(typeof __WEBPACK_EXTERNAL_MODULE_electron_common__ === 'undefined') { var e = new Error("Cannot find module 'electron/common'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
+if(typeof __WEBPACK_EXTERNAL_MODULE_electron_common__ === 'undefined') { const e = new Error("Cannot find module 'electron/common'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
 
 module.exports = __WEBPACK_EXTERNAL_MODULE_electron_common__;
 
@@ -77,7 +77,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_electron_common__;
 (module) {
 
 "use strict";
-if(typeof __WEBPACK_EXTERNAL_MODULE_sharp__ === 'undefined') { var e = new Error("Cannot find module 'sharp'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
+if(typeof __WEBPACK_EXTERNAL_MODULE_sharp__ === 'undefined') { const e = new Error("Cannot find module 'sharp'"); e.code = 'MODULE_NOT_FOUND'; throw e; }
 
 module.exports = __WEBPACK_EXTERNAL_MODULE_sharp__;
 
@@ -4176,17 +4176,17 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_base__;
 /******/ 	});
 /************************************************************************/
 /******/ 	// The module cache
-/******/ 	var __webpack_module_cache__ = {};
+/******/ 	const __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
 /******/ 	function __webpack_require__(moduleId) {
 /******/ 		// Check if module is in cache
-/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		const cachedModule = __webpack_module_cache__[moduleId];
 /******/ 		if (cachedModule !== undefined) {
 /******/ 			return cachedModule.exports;
 /******/ 		}
 /******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 		const module = __webpack_module_cache__[moduleId] = {
 /******/ 			// no module.id needed
 /******/ 			// no module.loaded needed
 /******/ 			exports: {}
@@ -4195,7 +4195,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_base__;
 /******/ 		// Execute the module function
 /******/ 		if (!(moduleId in __webpack_modules__)) {
 /******/ 			delete __webpack_module_cache__[moduleId];
-/******/ 			var e = new Error("Cannot find module '" + moduleId + "'");
+/******/ 			const e = new Error("Cannot find module '" + moduleId + "'");
 /******/ 			e.code = 'MODULE_NOT_FOUND';
 /******/ 			throw e;
 /******/ 		}
@@ -4207,82 +4207,56 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_base__;
 /******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/compat get default export */
-/******/ 	(() => {
-/******/ 		// getDefaultExport function for compatibility with non-harmony modules
-/******/ 		__webpack_require__.n = (module) => {
-/******/ 			var getter = module && module.__esModule ?
-/******/ 				() => (module['default']) :
-/******/ 				() => (module);
-/******/ 			__webpack_require__.d(getter, { a: getter });
-/******/ 			return getter;
-/******/ 		};
-/******/ 	})();
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__webpack_require__.n = (module) => {
+/******/ 		const getter = module && module.__esModule ?
+/******/ 			() => (module['default']) :
+/******/ 			() => (module);
+/******/ 		__webpack_require__.d(getter, { a: getter });
+/******/ 		return getter;
+/******/ 	};
 /******/ 	
 /******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
+/******/ 	// define getter/value functions for harmony exports
+/******/ 	__webpack_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
 /******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/global */
-/******/ 	(() => {
-/******/ 		__webpack_require__.g = (function() {
-/******/ 			if (typeof globalThis === 'object') return globalThis;
-/******/ 			try {
-/******/ 				return this || new Function('return this')();
-/******/ 			} catch (e) {
-/******/ 				if (typeof window === 'object') return window;
-/******/ 			}
-/******/ 		})();
-/******/ 	})();
+/******/ 		}
+/******/ 	};
 /******/ 	
 /******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ 	})();
+/******/ 	__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop));
 /******/ 	
 /******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = (exports) => {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
+/******/ 	// define __esModule on exports
+/******/ 	__webpack_require__.r = (exports) => {
+/******/ 		Object.defineProperties(exports, { [Symbol.toStringTag]: { value: 'Module' }, __esModule: { value: true } });
+/******/ 	};
 /******/ 	
 /******/ 	/* webpack/runtime/publicPath */
 /******/ 	(() => {
-/******/ 		var scriptUrl;
-/******/ 		if (__webpack_require__.g.importScripts) scriptUrl = __webpack_require__.g.location + "";
-/******/ 		var document = __webpack_require__.g.document;
-/******/ 		if (!scriptUrl && document) {
-/******/ 			if (document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT')
-/******/ 				scriptUrl = document.currentScript.src;
-/******/ 			if (!scriptUrl) {
-/******/ 				var scripts = document.getElementsByTagName("script");
-/******/ 				if(scripts.length) {
-/******/ 					var i = scripts.length - 1;
-/******/ 					while (i > -1 && (!scriptUrl || !/^http(s?):/.test(scriptUrl))) scriptUrl = scripts[i--].src;
+/******/ 		let scriptUrl;
+/******/ 		if (typeof document !== "undefined") {
+/******/ 			const currentScript = document.currentScript;
+/******/ 			if (!currentScript || /^script$/i.test(currentScript.tagName)) {
+/******/ 				scriptUrl = currentScript?.src;
+/******/ 				if (!scriptUrl) {
+/******/ 					const scripts = document.getElementsByTagName("script");
+/******/ 					let i = scripts.length;
+/******/ 					while (i && (!scriptUrl || !/^https?:/.test(scriptUrl))) scriptUrl = scripts[--i].src;
 /******/ 				}
 /******/ 			}
-/******/ 		}
+/******/ 		} else if (typeof importScripts !== "undefined") scriptUrl = location + "";
 /******/ 		// When supporting browsers where an automatic publicPath is not supported you must specify an output.publicPath manually via configuration
 /******/ 		// or pass an empty string ("") and set the __webpack_public_path__ variable from your code to use your own logic.
 /******/ 		if (!scriptUrl) throw new Error("Automatic publicPath is not supported in this browser");
-/******/ 		scriptUrl = scriptUrl.replace(/^blob:/, "").replace(/#.*$/, "").replace(/\?.*$/, "").replace(/\/[^\/]+$/, "/");
-/******/ 		__webpack_require__.p = scriptUrl;
+/******/ 		__webpack_require__.p = scriptUrl.replace(/^blob:|[?#].*$/g, "").replace(/\/[^/]+$/, "/");
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
+let __webpack_exports__ = {};
 // This entry needs to be wrapped in an IIFE because it needs to be in strict mode.
 (() => {
 "use strict";
@@ -4291,7 +4265,6 @@ var __webpack_exports__ = {};
   \******************/
 __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var alt1__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! alt1 */ "../node_modules/alt1/dist/base/index.js");
-/* harmony import */ var alt1__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(alt1__WEBPACK_IMPORTED_MODULE_0__);
 /* harmony import */ var _index_html__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./index.html */ "./index.html");
 /* harmony import */ var _appconfig_json__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./appconfig.json */ "./appconfig.json");
 /* harmony import */ var _icon_png__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./icon.png */ "./icon.png");
@@ -4370,36 +4343,49 @@ function calculateKillsPerHour() {
     var elapsedTimeInHours = (Date.now() - startTime) / 3600000;
     return killCount / elapsedTimeInHours;
 }
-var reader = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_4___default())();
-reader.readargs.colors.push(alt1__WEBPACK_IMPORTED_MODULE_0__.mixColor(43, 179, 20), // Completion Time
-alt1__WEBPACK_IMPORTED_MODULE_0__.mixColor(45, 185, 20) // Completion Time 2
-);
-var completionTimes = [];
+var completionColors = [
+    alt1__WEBPACK_IMPORTED_MODULE_0__.mixColor(43, 179, 20), // Completion Time
+    alt1__WEBPACK_IMPORTED_MODULE_0__.mixColor(45, 185, 20) // Completion Time 2
+];
+var killTimesTenths = [];
 var deathCount = 0;
 var killCount = 0;
-var loggedTimestamps = new Set();
-function formatSeconds(t) {
-    var m = Math.floor(t / 60);
-    var s = Math.floor(t % 60);
-    var ms = Math.floor(((t % 1) * 1000) / 100);
-    return "".concat(m.toString().padStart(2, "0"), ":").concat(s.toString().padStart(2, "0"), ".").concat(ms);
+var recentEvents = new Map();
+function formatTenths(tenths) {
+    var minutes = Math.floor(tenths / 600);
+    var seconds = Math.floor(tenths / 10) % 60;
+    return "".concat(minutes.toString().padStart(2, "0"), ":").concat(seconds.toString().padStart(2, "0"), ".").concat(tenths % 10);
 }
-function processLine(lineText, timestamp) {
-    if (lineText.includes("completion time:") &&
-        !loggedTimestamps.has(timestamp)) {
-        loggedTimestamps.add(timestamp);
-        var timeMatch = lineText.match(/completion time:\s*(\d+):(\d+)(?:\.(\d{1}))?/i);
-        if (timeMatch) {
-            var minutes = parseInt(timeMatch[1]);
-            var seconds = parseInt(timeMatch[2]);
-            var milliseconds = timeMatch[3] ? parseInt(timeMatch[3]) * 100 : 0;
-            logCompletionTime(minutes, seconds, milliseconds);
-        }
+function averageTime() {
+    var total = killTimesTenths.reduce(function (sum, time) { return sum + time; }, 0);
+    return formatTenths(killCount ? Math.floor(total / killCount) : 0);
+}
+function processLine(text, baseline) {
+    var time = text.match(/completion time:\s*(\d+):(\d+)(?:\.(\d))?/i);
+    var tenths = time ? (Number(time[1]) * 60 + Number(time[2])) * 10 + Number(time[3] || 0) : null;
+    if (tenths === null && !/oh dear, you are dead!/i.test(text))
+        return;
+    // Alt1 already returns new lines by overlap when there is no readable timestamp.
+    var timestamp = text.match(/\[(\d{2}:\d{2}:\d{2})\]/);
+    if (timestamp) {
+        var key = "".concat(timestamp[1], ":").concat(tenths === null ? "death" : tenths);
+        var now_1 = Date.now();
+        // Chat timestamps repeat daily. Only retain recent events for OCR replays.
+        recentEvents.forEach(function (seen, event) {
+            if (now_1 - seen >= 12 * 60 * 60 * 1000)
+                recentEvents.delete(event);
+        });
+        if (recentEvents.has(key))
+            return;
+        recentEvents.set(key, now_1);
     }
-    else if (lineText.includes("oh dear, you are dead!") &&
-        !loggedTimestamps.has(timestamp)) {
-        loggedTimestamps.add(timestamp);
+    if (baseline)
+        return;
+    if (tenths === null) {
         logDeath();
+    }
+    else {
+        logCompletionTime(tenths);
     }
 }
 function startPeriodicUpdates() {
@@ -4408,13 +4394,14 @@ function startPeriodicUpdates() {
         updateTimerDisplay();
     }, 600);
 }
-function logCompletionTime(minutes, seconds, milliseconds) {
-    var totalSeconds = minutes * 60 + seconds + milliseconds / 1000;
-    completionTimes.push(totalSeconds);
+function logCompletionTime(tenths) {
+    if (startTime === null) {
+        startTime = Date.now() - tenths * 100;
+        updateTimerDisplay();
+    }
+    killTimesTenths.push(tenths);
     killCount++;
-    var timeString = "".concat(minutes.toString().padStart(2, "0"), ":").concat(seconds
-        .toString()
-        .padStart(2, "0"), ".").concat(Math.floor(milliseconds / 100));
+    var timeString = formatTenths(tenths);
     console.log("Kill ".concat(killCount, " completed in: ").concat(timeString));
     updateDisplay(timeString, killCount);
     updateAverageTime();
@@ -4474,7 +4461,7 @@ function updateDeathCount() {
 }
 function updateBestWorst() {
     var bestWorstDiv = document.getElementById("best-worst");
-    if (completionTimes.length === 0) {
+    if (killTimesTenths.length === 0) {
         if (bestWorstDiv)
             bestWorstDiv.remove();
         return;
@@ -4484,9 +4471,9 @@ function updateBestWorst() {
         bestWorstDiv.id = "best-worst";
         bestWorstDiv.style.color = "#b080d0";
     }
-    var best = Math.min.apply(Math, completionTimes);
-    var worst = Math.max.apply(Math, completionTimes);
-    bestWorstDiv.textContent = "Best: ".concat(formatSeconds(best), " | Worst: ").concat(formatSeconds(worst));
+    var best = Math.min.apply(Math, killTimesTenths);
+    var worst = Math.max.apply(Math, killTimesTenths);
+    bestWorstDiv.textContent = "Best: ".concat(formatTenths(best), " | Worst: ").concat(formatTenths(worst));
     var avgDiv = document.getElementById("average-time");
     if (avgDiv) {
         if (avgDiv.nextSibling !== bestWorstDiv) {
@@ -4522,7 +4509,7 @@ function updateKillCount() {
     }
 }
 function removeKill(index) {
-    completionTimes.splice(index, 1);
+    killTimesTenths.splice(index, 1);
     killCount--;
     renumberKills();
     updateAverageTime();
@@ -4591,12 +4578,11 @@ function updateDisplay(timeString, killNumber) {
     container.scrollTop = container.scrollHeight;
 }
 function updateAverageTime() {
-    if (completionTimes.length === 0)
-        return;
-    var totalSeconds = completionTimes.reduce(function (acc, cur) { return acc + cur; }, 0);
-    var averageSeconds = totalSeconds / completionTimes.length;
-    var averageTimeString = formatSeconds(averageSeconds);
     var averageDiv = document.getElementById("average-time");
+    if (killTimesTenths.length === 0) {
+        averageDiv === null || averageDiv === void 0 ? void 0 : averageDiv.remove();
+        return;
+    }
     if (!averageDiv) {
         averageDiv = document.createElement("div");
         averageDiv.id = "average-time";
@@ -4606,7 +4592,7 @@ function updateAverageTime() {
     else {
         output.insertAdjacentElement("afterbegin", averageDiv);
     }
-    averageDiv.textContent = "Avg Kill Time: ".concat(averageTimeString);
+    averageDiv.textContent = "Avg Kill Time: ".concat(averageTime());
     updateKillsPerHour();
 }
 function exportLog() {
@@ -4614,10 +4600,6 @@ function exportLog() {
     var exportTime = now.toLocaleString();
     var startDate = startTime ? new Date(startTime).toLocaleString() : "N/A";
     var duration = startTime ? formatElapsed(Date.now() - startTime) : "N/A";
-    var avgSeconds = completionTimes.length > 0
-        ? completionTimes.reduce(function (a, b) { return a + b; }, 0) / completionTimes.length
-        : 0;
-    var avgStr = formatSeconds(avgSeconds);
     var lines = __spreadArray(__spreadArray([
         "KPH Tracker Export",
         "Exported: ".concat(exportTime),
@@ -4626,17 +4608,17 @@ function exportLog() {
         "",
         "Kills: ".concat(killCount),
         "Deaths: ".concat(deathCount),
-        "Average kill time: ".concat(avgStr),
+        "Average kill time: ".concat(averageTime()),
         "Kills per hour: ".concat(killsPerHour.toFixed(1))
-    ], (completionTimes.length > 0 ? [
-        "Best kill: ".concat(formatSeconds(Math.min.apply(Math, completionTimes))),
-        "Worst kill: ".concat(formatSeconds(Math.max.apply(Math, completionTimes))),
+    ], (killTimesTenths.length > 0 ? [
+        "Best kill: ".concat(formatTenths(Math.min.apply(Math, killTimesTenths))),
+        "Worst kill: ".concat(formatTenths(Math.max.apply(Math, killTimesTenths))),
     ] : []), true), [
         "",
         "--- Kill Log ---",
     ], false);
-    completionTimes.forEach(function (t, i) {
-        lines.push("Kill ".concat(i + 1, ": ").concat(formatSeconds(t)));
+    killTimesTenths.forEach(function (tenths, i) {
+        lines.push("Kill ".concat(i + 1, ": ").concat(formatTenths(tenths)));
     });
     var blob = new Blob([lines.join("\n")], { type: "text/plain" });
     var url = URL.createObjectURL(blob);
@@ -4646,50 +4628,88 @@ function exportLog() {
     a.click();
     URL.revokeObjectURL(url);
 }
-function readChatbox() {
-    if (!window.alt1) {
-        console.log("Alt1 not detected");
-        return;
-    }
-    setInterval(function () {
-        if (!reader.pos) {
-            console.log("Chatbox not found, searching...");
-            try {
-                reader.find();
-            }
-            catch (e) {
-                console.warn("Error finding chatbox:", e);
-                return;
-            }
-            if (reader.pos) {
-                console.log("Chatbox found at", reader.pos);
-            }
-            else {
-                console.log("Chatbox not found");
-                return;
-            }
+function sameChatbox(a, b) {
+    // Alt1 can refine rect.x while reading text. The detected corners stay fixed.
+    return a.type === b.type &&
+        a.botleft.x === b.botleft.x && a.botleft.y === b.botleft.y &&
+        a.topright.x === b.topright.x && a.topright.y === b.topright.y;
+}
+function firstNewLine(reader, lines, previousTail) {
+    // A fresh reader returns the whole box. Resume after the last known lines
+    // if they are still visible; otherwise treat this first snapshot as history.
+    if (previousTail.length >= reader.minoverlap) {
+        var _loop_1 = function (end) {
+            var start = end - previousTail.length;
+            if (previousTail.every(function (line, i) { return reader.matchLines(line.text, lines[start + i].text); }))
+                return { value: end };
+        };
+        for (var end = lines.length; end >= previousTail.length; end--) {
+            var state_1 = _loop_1(end);
+            if (typeof state_1 === "object")
+                return state_1.value;
         }
-        var lines = reader.read();
-        if (!lines) {
-            console.log("No lines read");
+    }
+    return lines.length;
+}
+function readChatbox() {
+    var reader = null;
+    var previousTail = [];
+    var nextSearchAt = 0;
+    var needsBaseline = true;
+    setInterval(function () {
+        var _a;
+        var lines;
+        try {
+            var now = Date.now();
+            if (now >= nextSearchAt) {
+                nextSearchAt = now + 5000;
+                var candidate = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_4___default())();
+                var found = candidate.find();
+                if (!found) {
+                    reader = null;
+                    return;
+                }
+                if (!reader || !sameChatbox(reader.pos.mainbox, found.mainbox)) {
+                    reader = candidate;
+                    (_a = reader.readargs.colors).push.apply(_a, completionColors);
+                    needsBaseline = true;
+                }
+            }
+            if (!reader)
+                return;
+            lines = reader.read();
+        }
+        catch (error) {
+            console.warn("Could not capture chatbox", error);
+            reader = null;
             return;
         }
-        console.log("Read ".concat(lines.length, " lines"));
-        for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
-            var line = lines_1[_i];
-            var timestampMatch = line.text.match(/\[(\d{2}:\d{2}:\d{2})\]/);
-            var timestamp = timestampMatch ? timestampMatch[1] : "";
-            console.log("Chat line:", line.text);
-            var lineText = line.text.toLowerCase();
-            processLine(lineText, timestamp);
-        }
+        if (!lines)
+            return; // Font detection can take more than one capture.
+        var start = needsBaseline ? firstNewLine(reader, lines, previousTail) : 0;
+        lines.forEach(function (line, i) { return processLine(line.text, i < start); });
+        needsBaseline = false;
+        if (lines.some(function (line) { return line.text.trim(); }))
+            previousTail = reader.overlaplines.slice();
     }, alt1.captureInterval);
 }
+function showWaitingMessage() {
+    var timerDiv = document.getElementById("timer-info");
+    if (!timerDiv) {
+        timerDiv = document.createElement("div");
+        timerDiv.id = "timer-info";
+        timerDiv.style.color = "#a08050";
+        timerDiv.style.marginBottom = "4px";
+        timerDiv.style.borderBottom = "1px solid #5c4a28";
+        timerDiv.style.paddingBottom = "4px";
+        output.insertAdjacentElement("afterbegin", timerDiv);
+    }
+    timerDiv.textContent = "Waiting for first kill...";
+}
 function main() {
-    startTime = Date.now();
     if (window.alt1) {
         alt1.identifyAppUrl("./appconfig.json");
-        updateTimerDisplay();
+        showWaitingMessage();
         readChatbox();
         startPeriodicUpdates();
     }
