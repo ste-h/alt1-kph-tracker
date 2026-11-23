@@ -1,6 +1,9 @@
 {
 	"scripts": {
+		"prebuild": "patch-package --error-on-fail",
 		"build": "webpack",
+		"test": "patch-package --error-on-fail && node --test",
+		"prewatch": "patch-package --error-on-fail",
 		"watch": "webpack --watch"
 	},
 	"dependencies": {
@@ -8,6 +11,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^12.12.54",
+		"patch-package": "8.0.1",
 		"sharp": "^0.31.3",
 		"ts-loader": "^9.3.1",
 		"typescript": "^5.1.3",

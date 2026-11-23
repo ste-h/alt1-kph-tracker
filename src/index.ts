@@ -75,6 +75,7 @@ const killTimesTenths: number[] = [];
 let deathCount = 0;
 let killCount = 0;
 const recentEvents = new Map<string, number>();
+const chatTimestamp = /^\s*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*/;
 
 function formatTenths(tenths: number): string {
   const minutes = Math.floor(tenths / 600);
@@ -380,6 +381,9 @@ function sameChatbox(a: Chatbox, b: Chatbox): boolean {
 function createChatReader(): ChatBoxReader {
   const reader = new ChatBoxReader();
   reader.readargs.colors.push(...completionColors);
+  // A timestamp can appear a capture before its message body. Use text overlap
+  // so the reader can deliver the completed line even if its clock hasn't changed.
+  reader.diffReadUseTimestamps = false;
   return reader;
 }
 
@@ -387,9 +391,7 @@ type ChatCapture = { image: a1lib.ImgRefData; box: Chatbox };
 
 function readEarlierChat(capture: ChatCapture, reader: ChatBoxReader): ChatLine[] | null {
   const box = reader.pos.mainbox;
-  const leftMargin = box.leftfound ? 0 : 300; // Alt1's search margin for an unknown left edge.
-  const area = new a1lib.Rect(box.rect.x - leftMargin, box.rect.y, box.rect.width + leftMargin, box.rect.height);
-  if (!sameChatbox(capture.box, box) || !capture.image.containsArea(area)) return null;
+  if (!sameChatbox(capture.box, box) || !capture.image.containsArea(box.rect)) return null;
 
   const history = createChatReader();
   // OCR can refine the box while reading. Give the historical read its own geometry.
@@ -398,20 +400,29 @@ function readEarlierChat(capture: ChatCapture, reader: ChatBoxReader): ChatLine[
   return history.read(capture.image);
 }
 
-function newLinesSinceCapture(reader: ChatBoxReader, earlier: ChatLine[], current: ChatLine[]): ChatLine[] {
+function newLinesSinceCapture(reader: ChatBoxReader, earlier: ChatLine[], current: ChatLine[], opening: boolean): ChatLine[] {
   const oldText = earlier.filter(line => line.text.trim());
   const newText = current.filter(line => line.text.trim());
+  function matches(old: ChatLine, line: ChatLine) {
+    if (reader.matchLines(old.text, line.text)) return true;
+    // A timestamp on the opening screen marks an existing row even if its
+    // body became readable later. Consume that row only once.
+    if (!opening) return false;
+    const stamp = old.text.match(chatTimestamp);
+    return !!stamp && !old.text.slice(stamp[0].length).trim() &&
+      line.text.match(chatTimestamp)?.[1] === stamp[1];
+  }
   // Chat scrolls upwards: the surviving suffix of the old frame is the prefix of the new one.
   for (let n = Math.min(oldText.length, newText.length); n > 0; n--) {
     const offset = oldText.length - n;
-    if (oldText.slice(offset).every((line, i) => reader.matchLines(line.text, newText[i].text))) {
+    if (oldText.slice(offset).every((line, i) => matches(line, newText[i]))) {
       return newText.slice(n);
     }
   }
   // An OCR change on an unrelated row can break the overlap. Still exclude
   // unchanged old lines, consuming each occurrence once for repeated kill times.
   return newText.filter(line => {
-    const i = oldText.findIndex(old => reader.matchLines(old.text, line.text));
+    const i = oldText.findIndex(old => matches(old, line));
     if (i === -1) return true;
     oldText.splice(i, 1);
     return false;
@@ -436,7 +447,9 @@ function processFirstRead(reader: ChatBoxReader, lines: ChatLine[], previousTail
   const start = firstNewLine(reader, history, previousTail);
   history.forEach((line, i) => processLine(line.text, i < start));
   if (earlier) {
-    newLinesSinceCapture(reader, earlier, lines).forEach(line => processLine(line.text, false));
+    const added = new Set(newLinesSinceCapture(reader, earlier, lines, previousTail.length === 0));
+    // Seed replay protection even for opening rows whose bodies just became readable.
+    lines.forEach(line => processLine(line.text, !added.has(line)));
   }
 }
 
@@ -448,6 +461,15 @@ function readChatbox() {
   let earlierCapture: ChatCapture | null = null;
   let openingFrame: a1lib.ImgRefData | null = null;
 
+  function saveOpeningFrame(image: a1lib.ImgRef) {
+    // Bound images expire on the next native capture.
+    try {
+      openingFrame = new a1lib.ImgRefData(image.toData());
+    } catch (error) {
+      console.warn("Could not save opening frame", error);
+    }
+  }
+
   function poll(atLaunch = false) {
     let image: a1lib.ImgRef | null = null;
     try {
@@ -456,21 +478,30 @@ function readChatbox() {
         nextSearchAt = now + 1000;
         const candidate = createChatReader();
         if (atLaunch) image = a1lib.captureHoldFullRs();
-        if (!candidate.find(image)) {
-          reader = null;
-          return;
+        try {
+          candidate.find(image);
+        } catch (error) {
+          if (!reader) throw error;
+          console.warn("Could not relocate chatbox", error);
         }
-        const current = reader?.pos.mainbox;
-        const found = candidate.pos.mainbox;
-        const betterLeftEdge = found.leftfound && (!current?.leftfound || found.rect.x !== current.rect.x);
-        if (!current || !sameChatbox(current, found) || betterLeftEdge ||
-            (needsBaseline && found.leftfound === current.leftfound)) {
-          reader = candidate;
-          needsBaseline = true;
+        if (candidate.pos) {
+          const current = reader?.pos.mainbox;
+          const found = candidate.pos.mainbox;
+          const betterLeftEdge = found.leftfound && (!current?.leftfound || found.rect.x !== current.rect.x);
+          if (!current || !sameChatbox(current, found) || betterLeftEdge ||
+              (needsBaseline && found.leftfound === current.leftfound)) {
+            reader = candidate;
+            needsBaseline = true;
+          }
+          nextSearchAt = now + 5000;
         }
-        nextSearchAt = now + 5000;
       }
-      if (!reader) return;
+      if (!reader) {
+        // Detection can finish after launch. Keep the opening pixels so a
+        // subsequent successful search can still distinguish existing rows.
+        if (image) saveOpeningFrame(image);
+        return;
+      }
       reader.diffRead = !needsBaseline;
       const lines = reader.read(image);
       const box = reader.pos.mainbox;
@@ -481,10 +512,17 @@ function readChatbox() {
         const original = createChatReader().find(frame)?.mainbox;
         if (original && sameChatbox(original, box)) earlierCapture = { image: frame, box: original };
       }
-      if (!lines?.some(line => line.text.trim())) {
+      const hasBody = lines?.some(line => line.text.replace(chatTimestamp, "").trim());
+      if (!hasBody) {
         // The pixels are captured even when Alt1 cannot identify the font yet.
         if (reader.lastReadBuffer && (!earlierCapture || !sameChatbox(earlierCapture.box, box))) {
           earlierCapture = { image: reader.lastReadBuffer, box };
+        }
+        if (lines?.length) {
+          // A changed frame containing only blanks or timestamps can displace
+          // Alt1's text overlap. Resume from the last readable capture instead.
+          reader.font = null;
+          needsBaseline = true;
         }
         return;
       }
@@ -500,15 +538,8 @@ function readChatbox() {
     } catch (error) {
       console.warn("Could not capture chatbox", error);
       reader = null;
-      // A bound Alt1 image expires on the next capture. Keep a copy only if the
-      // initial search/read failed before we could save the chat region itself.
-      if (image && !earlierCapture) {
-        try {
-          openingFrame = new a1lib.ImgRefData(image.toData());
-        } catch (error) {
-          console.warn("Could not save opening frame", error);
-        }
-      }
+      nextSearchAt = Date.now() + 1000;
+      if (image && !earlierCapture) saveOpeningFrame(image);
     }
   }
 

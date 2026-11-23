@@ -2824,7 +2824,14 @@ class ChatBoxReader {
             return null;
         }
         var box = this.pos.mainbox;
-        var leftmargin = (box.leftfound ? 0 : 300);
+        const area = img || { x: 0, y: 0, width: alt1.rsWidth, height: alt1.rsHeight };
+        const rect = box.rect;
+        if (![rect.x, rect.y, rect.width, rect.height].every(Number.isSafeInteger) ||
+            rect.width <= 0 || rect.height <= 0 || rect.x < area.x || rect.y < area.y ||
+            rect.x + rect.width > area.x + area.width || rect.y + rect.height > area.y + area.height) {
+            throw new RangeError(`Invalid chatbox (${rect.x},${rect.y} ${rect.width}x${rect.height}) in (${area.x},${area.y} ${area.width}x${area.height})`);
+        }
+        const leftmargin = box.leftfound ? 0 : Math.min(300, rect.x - area.x);
         let imgx = box.rect.x - leftmargin;
         let imgy = box.rect.y;
         let imgdata;
@@ -2850,7 +2857,9 @@ class ChatBoxReader {
             for (let font of fonts) {
                 let line1 = this.readChatLine(box, imgdata, imgx, imgy, font, ocrcolors, 0);
                 let line2 = this.readChatLine(box, imgdata, imgx, imgy, font, ocrcolors, 1);
-                let m = (line1.text + line2.text).match(/\w/g);
+                // Two recognizable timestamps alone can pass the ten-character font test.
+                const stamp = /^\s*\[\d{1,2}:\d{2}(?::\d{2})?\]\s*/;
+                let m = (line1.text.replace(stamp, "") + line2.text.replace(stamp, "")).match(/\w/g);
                 if (m && m.length > 10) {
                     this.font = font;
                     break;
@@ -3027,6 +3036,10 @@ class ChatBoxReader {
                         line0x: 0,
                         line0y: 0
                     };
+                    // With multiple panels the two lists of corners can arrive in different orders.
+                    if (group.rect.width <= 0 || group.rect.height <= 0 || !img.containsArea(group.rect)) {
+                        continue;
+                    }
                     if (groups.find(q => q.rect.overlaps(group.rect))) {
                         continue;
                     }
@@ -3070,7 +3083,7 @@ class ChatBoxReader {
                 }
                 if (pos.length != 0) {
                     group.leftfound = true;
-                    var d = group.rect.x - pos[0].x + 2;
+                    var d = group.rect.x - Math.max(0, pos[0].x - 2);
                     group.rect.x -= d;
                     group.rect.width += d;
                 }
@@ -3376,7 +3389,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_ocr__;
 /******/ 	var __webpack_module_cache__ = {};
 /******/ 	
 /******/ 	// The require function
-/******/ 	function __nested_webpack_require_520395__(moduleId) {
+/******/ 	function __nested_webpack_require_521464__(moduleId) {
 /******/ 		// Check if module is in cache
 /******/ 		var cachedModule = __webpack_module_cache__[moduleId];
 /******/ 		if (cachedModule !== undefined) {
@@ -3396,7 +3409,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_ocr__;
 /******/ 		};
 /******/ 	
 /******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_520395__);
+/******/ 		__webpack_modules__[moduleId].call(module.exports, module, module.exports, __nested_webpack_require_521464__);
 /******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
@@ -3407,7 +3420,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_ocr__;
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
 /******/ 	// This entry module is referenced by other modules so it can't be inlined
-/******/ 	var __nested_webpack_exports__ = __nested_webpack_require_520395__("./src/chatbox/index.ts");
+/******/ 	var __nested_webpack_exports__ = __nested_webpack_require_521464__("./src/chatbox/index.ts");
 /******/ 	
 /******/ 	return __nested_webpack_exports__;
 /******/ })()
@@ -4362,6 +4375,7 @@ var killTimesTenths = [];
 var deathCount = 0;
 var killCount = 0;
 var recentEvents = new Map();
+var chatTimestamp = /^\s*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\s*/;
 function formatTenths(tenths) {
     var minutes = Math.floor(tenths / 600);
     var seconds = Math.floor(tenths / 10) % 60;
@@ -4649,13 +4663,14 @@ function createChatReader() {
     var _a;
     var reader = new (alt1_chatbox__WEBPACK_IMPORTED_MODULE_4___default())();
     (_a = reader.readargs.colors).push.apply(_a, completionColors);
+    // A timestamp can appear a capture before its message body. Use text overlap
+    // so the reader can deliver the completed line even if its clock hasn't changed.
+    reader.diffReadUseTimestamps = false;
     return reader;
 }
 function readEarlierChat(capture, reader) {
     var box = reader.pos.mainbox;
-    var leftMargin = box.leftfound ? 0 : 300; // Alt1's search margin for an unknown left edge.
-    var area = new alt1__WEBPACK_IMPORTED_MODULE_0__.Rect(box.rect.x - leftMargin, box.rect.y, box.rect.width + leftMargin, box.rect.height);
-    if (!sameChatbox(capture.box, box) || !capture.image.containsArea(area))
+    if (!sameChatbox(capture.box, box) || !capture.image.containsArea(box.rect))
         return null;
     var history = createChatReader();
     // OCR can refine the box while reading. Give the historical read its own geometry.
@@ -4663,20 +4678,32 @@ function readEarlierChat(capture, reader) {
     history.font = reader.font;
     return history.read(capture.image);
 }
-function newLinesSinceCapture(reader, earlier, current) {
+function newLinesSinceCapture(reader, earlier, current, opening) {
     var oldText = earlier.filter(function (line) { return line.text.trim(); });
     var newText = current.filter(function (line) { return line.text.trim(); });
+    function matches(old, line) {
+        var _a;
+        if (reader.matchLines(old.text, line.text))
+            return true;
+        // A timestamp on the opening screen marks an existing row even if its
+        // body became readable later. Consume that row only once.
+        if (!opening)
+            return false;
+        var stamp = old.text.match(chatTimestamp);
+        return !!stamp && !old.text.slice(stamp[0].length).trim() &&
+            ((_a = line.text.match(chatTimestamp)) === null || _a === void 0 ? void 0 : _a[1]) === stamp[1];
+    }
     // Chat scrolls upwards: the surviving suffix of the old frame is the prefix of the new one.
     for (var n = Math.min(oldText.length, newText.length); n > 0; n--) {
         var offset = oldText.length - n;
-        if (oldText.slice(offset).every(function (line, i) { return reader.matchLines(line.text, newText[i].text); })) {
+        if (oldText.slice(offset).every(function (line, i) { return matches(line, newText[i]); })) {
             return newText.slice(n);
         }
     }
     // An OCR change on an unrelated row can break the overlap. Still exclude
     // unchanged old lines, consuming each occurrence once for repeated kill times.
     return newText.filter(function (line) {
-        var i = oldText.findIndex(function (old) { return reader.matchLines(old.text, line.text); });
+        var i = oldText.findIndex(function (old) { return matches(old, line); });
         if (i === -1)
             return true;
         oldText.splice(i, 1);
@@ -4706,7 +4733,9 @@ function processFirstRead(reader, lines, previousTail, capture) {
     var start = firstNewLine(reader, history, previousTail);
     history.forEach(function (line, i) { return processLine(line.text, i < start); });
     if (earlier) {
-        newLinesSinceCapture(reader, earlier, lines).forEach(function (line) { return processLine(line.text, false); });
+        var added_1 = new Set(newLinesSinceCapture(reader, earlier, lines, previousTail.length === 0));
+        // Seed replay protection even for opening rows whose bodies just became readable.
+        lines.forEach(function (line) { return processLine(line.text, !added_1.has(line)); });
     }
 }
 function readChatbox() {
@@ -4716,6 +4745,15 @@ function readChatbox() {
     var needsBaseline = true;
     var earlierCapture = null;
     var openingFrame = null;
+    function saveOpeningFrame(image) {
+        // Bound images expire on the next native capture.
+        try {
+            openingFrame = new alt1__WEBPACK_IMPORTED_MODULE_0__.ImgRefData(image.toData());
+        }
+        catch (error) {
+            console.warn("Could not save opening frame", error);
+        }
+    }
     function poll(atLaunch) {
         var _a;
         if (atLaunch === void 0) { atLaunch = false; }
@@ -4727,22 +4765,33 @@ function readChatbox() {
                 var candidate = createChatReader();
                 if (atLaunch)
                     image = alt1__WEBPACK_IMPORTED_MODULE_0__.captureHoldFullRs();
-                if (!candidate.find(image)) {
-                    reader = null;
-                    return;
+                try {
+                    candidate.find(image);
                 }
-                var current = reader === null || reader === void 0 ? void 0 : reader.pos.mainbox;
-                var found = candidate.pos.mainbox;
-                var betterLeftEdge = found.leftfound && (!(current === null || current === void 0 ? void 0 : current.leftfound) || found.rect.x !== current.rect.x);
-                if (!current || !sameChatbox(current, found) || betterLeftEdge ||
-                    (needsBaseline && found.leftfound === current.leftfound)) {
-                    reader = candidate;
-                    needsBaseline = true;
+                catch (error) {
+                    if (!reader)
+                        throw error;
+                    console.warn("Could not relocate chatbox", error);
                 }
-                nextSearchAt = now + 5000;
+                if (candidate.pos) {
+                    var current = reader === null || reader === void 0 ? void 0 : reader.pos.mainbox;
+                    var found = candidate.pos.mainbox;
+                    var betterLeftEdge = found.leftfound && (!(current === null || current === void 0 ? void 0 : current.leftfound) || found.rect.x !== current.rect.x);
+                    if (!current || !sameChatbox(current, found) || betterLeftEdge ||
+                        (needsBaseline && found.leftfound === current.leftfound)) {
+                        reader = candidate;
+                        needsBaseline = true;
+                    }
+                    nextSearchAt = now + 5000;
+                }
             }
-            if (!reader)
+            if (!reader) {
+                // Detection can finish after launch. Keep the opening pixels so a
+                // subsequent successful search can still distinguish existing rows.
+                if (image)
+                    saveOpeningFrame(image);
                 return;
+            }
             reader.diffRead = !needsBaseline;
             var lines = reader.read(image);
             var box = reader.pos.mainbox;
@@ -4754,10 +4803,17 @@ function readChatbox() {
                 if (original && sameChatbox(original, box))
                     earlierCapture = { image: frame, box: original };
             }
-            if (!(lines === null || lines === void 0 ? void 0 : lines.some(function (line) { return line.text.trim(); }))) {
+            var hasBody = lines === null || lines === void 0 ? void 0 : lines.some(function (line) { return line.text.replace(chatTimestamp, "").trim(); });
+            if (!hasBody) {
                 // The pixels are captured even when Alt1 cannot identify the font yet.
                 if (reader.lastReadBuffer && (!earlierCapture || !sameChatbox(earlierCapture.box, box))) {
                     earlierCapture = { image: reader.lastReadBuffer, box: box };
+                }
+                if (lines === null || lines === void 0 ? void 0 : lines.length) {
+                    // A changed frame containing only blanks or timestamps can displace
+                    // Alt1's text overlap. Resume from the last readable capture instead.
+                    reader.font = null;
+                    needsBaseline = true;
                 }
                 return;
             }
@@ -4774,16 +4830,9 @@ function readChatbox() {
         catch (error) {
             console.warn("Could not capture chatbox", error);
             reader = null;
-            // A bound Alt1 image expires on the next capture. Keep a copy only if the
-            // initial search/read failed before we could save the chat region itself.
-            if (image && !earlierCapture) {
-                try {
-                    openingFrame = new alt1__WEBPACK_IMPORTED_MODULE_0__.ImgRefData(image.toData());
-                }
-                catch (error) {
-                    console.warn("Could not save opening frame", error);
-                }
-            }
+            nextSearchAt = Date.now() + 1000;
+            if (image && !earlierCapture)
+                saveOpeningFrame(image);
         }
     }
     poll(true);
