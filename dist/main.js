@@ -4384,6 +4384,30 @@ module.exports = __WEBPACK_EXTERNAL_MODULE_alt1_base__;
 ;
 });
 
+/***/ },
+
+/***/ "./completion-time.mjs"
+/*!*****************************!*\
+  !*** ./completion-time.mjs ***!
+  \*****************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   parseCompletionTime: () => (/* binding */ parseCompletionTime)
+/* harmony export */ });
+/**
+ * @param {string} text
+ * @returns {number | null} Completion time in tenths of a second.
+ */
+function parseCompletionTime(text) {
+  const time = text.match(/completion time:\s*(\d+):(\d{2})(?!\d)(?:\.(\d))?/i);
+  if (!time) return null;
+  return (Number(time[1]) * 60 + Number(time[2])) * 10 + Number(time[3] || 0);
+}
+
+
 /***/ }
 
 /******/ 	});
@@ -4484,6 +4508,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var alt1_chatbox__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! alt1/chatbox */ "../node_modules/alt1/dist/chatbox/index.js");
 /* harmony import */ var alt1_chatbox__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(alt1_chatbox__WEBPACK_IMPORTED_MODULE_4__);
 /* harmony import */ var _chat_debug__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./chat-debug */ "./chat-debug.ts");
+/* harmony import */ var _completion_time_mjs__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./completion-time.mjs */ "./completion-time.mjs");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -4504,6 +4529,7 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
+
 
 
 
@@ -4588,8 +4614,7 @@ function averageTime() {
     return formatTenths(killCount ? Math.floor(total / killCount) : 0);
 }
 function processLine(text, baseline) {
-    var time = text.match(/completion time:\s*(\d+):(\d+)(?:\.(\d))?/i);
-    var tenths = time ? (Number(time[1]) * 60 + Number(time[2])) * 10 + Number(time[3] || 0) : null;
+    var tenths = (0,_completion_time_mjs__WEBPACK_IMPORTED_MODULE_6__.parseCompletionTime)(text);
     if (tenths === null && !/oh dear, you are dead!/i.test(text))
         return;
     // Alt1 already returns new lines by overlap when there is no readable timestamp.

@@ -4,6 +4,7 @@ import "./appconfig.json";
 import "./icon.png";
 import ChatBoxReader, { Chatbox, ChatLine } from "alt1/chatbox";
 import { chatDebug, initChatDebug } from "./chat-debug";
+import { parseCompletionTime } from "./completion-time.mjs";
 
 var output = document.getElementById("output");
 output.style.backgroundColor = "#1a1410";
@@ -90,8 +91,7 @@ function averageTime(): string {
 }
 
 function processLine(text: string, baseline: boolean) {
-  const time = text.match(/completion time:\s*(\d+):(\d+)(?:\.(\d))?/i);
-  const tenths = time ? (Number(time[1]) * 60 + Number(time[2])) * 10 + Number(time[3] || 0) : null;
+  const tenths = parseCompletionTime(text);
   if (tenths === null && !/oh dear, you are dead!/i.test(text)) return;
 
   // Alt1 already returns new lines by overlap when there is no readable timestamp.
