@@ -3,6 +3,7 @@ import "./index.html";
 import "./appconfig.json";
 import "./icon.png";
 import ChatBoxReader, { Chatbox, ChatLine } from "alt1/chatbox";
+import { chatDebug, initChatDebug } from "./chat-debug";
 
 var output = document.getElementById("output");
 output.style.backgroundColor = "#1a1410";
@@ -118,6 +119,7 @@ function startPeriodicUpdates() {
   setInterval(() => {
     updateKillsPerHour();
     updateTimerDisplay();
+    chatDebug?.updatePollAge();
   }, 600);
 }
 
@@ -471,9 +473,14 @@ function readChatbox() {
   }
 
   function poll(atLaunch = false) {
+    const now = Date.now();
+    const killsBefore = killCount;
     let image: a1lib.ImgRef | null = null;
+    let chatFrame: a1lib.ImgRefData | null = null;
+    let lines: ChatLine[] | null = null;
+    let status = "Searching for chatbox";
+    let diagnosticError = "";
     try {
-      const now = Date.now();
       if (now >= nextSearchAt) {
         nextSearchAt = now + 1000;
         const candidate = createChatReader();
@@ -483,6 +490,7 @@ function readChatbox() {
         } catch (error) {
           if (!reader) throw error;
           console.warn("Could not relocate chatbox", error);
+          diagnosticError = `Chatbox search failed · ${error}`;
         }
         if (candidate.pos) {
           const current = reader?.pos.mainbox;
@@ -503,7 +511,8 @@ function readChatbox() {
         return;
       }
       reader.diffRead = !needsBaseline;
-      const lines = reader.read(image);
+      lines = reader.read(image);
+      chatFrame = reader.lastReadBuffer;
       const box = reader.pos.mainbox;
       if (openingFrame) {
         // The first search can run before Alt1's chat templates have finished loading.
@@ -514,6 +523,8 @@ function readChatbox() {
       }
       const hasBody = lines?.some(line => line.text.replace(chatTimestamp, "").trim());
       if (!hasBody) {
+        status = !lines ? "Looking for chat font" :
+          lines.length ? "Blank or timestamp-only OCR" : "No new chat lines";
         // The pixels are captured even when Alt1 cannot identify the font yet.
         if (reader.lastReadBuffer && (!earlierCapture || !sameChatbox(earlierCapture.box, box))) {
           earlierCapture = { image: reader.lastReadBuffer, box };
@@ -528,18 +539,30 @@ function readChatbox() {
       }
 
       if (needsBaseline) {
+        status = "Reading opening or recovered chat";
         processFirstRead(reader, lines, previousTail, earlierCapture);
         needsBaseline = false;
       } else {
+        status = "Reading new chat lines";
         lines.forEach(line => processLine(line.text, false));
       }
       earlierCapture = { image: reader.lastReadBuffer, box };
       previousTail = reader.overlaplines.slice();
     } catch (error) {
       console.warn("Could not capture chatbox", error);
+      status = "Chat capture failed";
+      diagnosticError = String(error);
       reader = null;
       nextSearchAt = Date.now() + 1000;
       if (image && !earlierCapture) saveOpeningFrame(image);
+    } finally {
+      try {
+        chatDebug?.record({
+          at: now, status, frame: chatFrame, reader, lines, error: diagnosticError, killsAdded: killCount - killsBefore
+        });
+      } catch (error) {
+        console.warn("Could not update chat diagnostics", error);
+      }
     }
   }
 
@@ -565,6 +588,7 @@ function main() {
   if (window.alt1) {
     alt1.identifyAppUrl("./appconfig.json");
     showWaitingMessage();
+    initChatDebug(alt1.captureInterval);
     readChatbox();
     startPeriodicUpdates();
   } else {

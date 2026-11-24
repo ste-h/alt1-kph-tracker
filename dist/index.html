@@ -1,9 +1,35 @@
 <!DOCTYPE html>
 <html>
-	<head></head>
-	<title>Dg Keys</title>
+	<head>
+		<meta charset="utf-8">
+		<title>Dg Keys</title>
+		<style>
+			#chat-debug { margin: 0 6px 6px; color: #c8b898; font: 12px/1.4 "Segoe UI", sans-serif; }
+			#chat-debug label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+			#chat-debug-panel { margin-top: 4px; padding: 5px; background: #241e14; border: 1px solid #5c4a28; }
+			#chat-debug canvas { max-width: 100%; height: auto; vertical-align: top; }
+			#chat-debug pre { margin: 3px 0 6px; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-variant-numeric: tabular-nums; }
+			#chat-debug summary { color: #d4b882; cursor: pointer; }
+		</style>
+	</head>
 	<body>
 		<div id="output"></div>
+		<section id="chat-debug" aria-label="Chat diagnostics" hidden>
+			<label><input type="checkbox" id="debug-chat-toggle" aria-controls="chat-debug-panel">Debug chat</label>
+			<div id="chat-debug-panel" hidden>
+				<strong id="debug-status"></strong><span id="debug-poll-age"></span>
+				<div id="debug-preview-time"></div>
+				<canvas id="debug-preview" aria-label="Last sampled chat capture" hidden></canvas>
+				<pre id="debug-stats"></pre>
+				<details id="debug-saved" hidden>
+					<summary>Earlier capture</summary>
+					<div id="debug-saved-time"></div>
+					<canvas id="debug-saved-preview" aria-label="Earlier chat capture"></canvas>
+				</details>
+				<details open><summary>Recent OCR text</summary><pre id="debug-ocr"></pre></details>
+				<details open><summary>Recent events</summary><pre id="debug-events"></pre></details>
+			</div>
+		</section>
 		<script src="./main.js"></script>
 	</body>
 </html>

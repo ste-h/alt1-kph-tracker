@@ -11,6 +11,206 @@
 return /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "./chat-debug.ts"
+/*!***********************!*\
+  !*** ./chat-debug.ts ***!
+  \***********************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   chatDebug: () => (/* binding */ chatDebug),
+/* harmony export */   initChatDebug: () => (/* binding */ initChatDebug)
+/* harmony export */ });
+function setText(id, text) {
+    var element = document.getElementById(id);
+    if (element.textContent !== text)
+        element.textContent = text;
+}
+function clock(at) {
+    return new Date(at).toTimeString().slice(0, 8);
+}
+function samePixels(a, b) {
+    if (a.x !== b.x || a.y !== b.y || a.width !== b.width || a.height !== b.height)
+        return false;
+    var left = a.buf.data;
+    var right = b.buf.data;
+    for (var i = 0; i < left.length; i++) {
+        if (left[i] !== right[i])
+            return false;
+    }
+    return true;
+}
+var ChatDebug = /** @class */ (function () {
+    function ChatDebug(interval) {
+        var _this = this;
+        this.interval = interval;
+        this.preview = document.getElementById("debug-preview");
+        this.saved = document.getElementById("debug-saved-preview");
+        this.previousFrame = null;
+        this.previewAt = 0;
+        this.changedAt = 0;
+        this.lastPoll = 0;
+        this.longestGap = 0;
+        this.polls = 0;
+        this.lastRender = 0;
+        this.lastError = "";
+        this.events = [];
+        this.ocr = [];
+        this.focusChanged = function (event) {
+            if (event.type === "focus")
+                _this.savePreview("plugin focus");
+            var message = event.type === "visibilitychange" ? "Page ".concat(document.visibilityState) :
+                event.type === "focus" ? "Plugin gained focus" : "Plugin lost focus";
+            _this.event(Date.now(), message);
+            _this.updatePollAge();
+        };
+        setText("debug-status", "Waiting for the next poll");
+        setText("debug-poll-age", "");
+        setText("debug-preview-time", "Waiting for chat pixels");
+        setText("debug-stats", "");
+        setText("debug-ocr", "Waiting for readable text");
+        this.event(Date.now(), "Debug enabled");
+        window.addEventListener("focus", this.focusChanged);
+        window.addEventListener("blur", this.focusChanged);
+        document.addEventListener("visibilitychange", this.focusChanged);
+    }
+    ChatDebug.prototype.event = function (at, message) {
+        this.events.unshift("".concat(clock(at), "  ").concat(message));
+        this.events.length = Math.min(this.events.length, 10);
+        setText("debug-events", this.events.join("\n"));
+    };
+    ChatDebug.prototype.updatePollAge = function () {
+        if (!this.lastPoll)
+            return;
+        var seconds = Math.max(0, Math.floor((Date.now() - this.lastPoll) / 1000));
+        setText("debug-poll-age", seconds ? " \u00B7 last poll ".concat(seconds, "s ago") : "");
+    };
+    ChatDebug.prototype.savePreview = function (reason) {
+        var _a;
+        if (this.preview.hidden)
+            return;
+        this.saved.width = this.preview.width;
+        this.saved.height = this.preview.height;
+        (_a = this.saved.getContext("2d")) === null || _a === void 0 ? void 0 : _a.drawImage(this.preview, 0, 0);
+        setText("debug-saved-time", "".concat(clock(this.previewAt), " \u00B7 before ").concat(reason));
+        document.getElementById("debug-saved").hidden = false;
+    };
+    ChatDebug.prototype.sampleFrame = function (frame, at) {
+        if (this.previousFrame && at - this.previewAt < 500)
+            return;
+        if (!this.previousFrame || !samePixels(this.previousFrame, frame)) {
+            if (this.previousFrame && this.previewAt - this.changedAt >= 5000) {
+                var seconds = Math.round((this.previewAt - this.changedAt) / 1000);
+                this.savePreview("pixels changed after ".concat(seconds, "s"));
+                this.event(at, "Preview changed after ".concat(seconds, "s of identical samples"));
+            }
+            var ctx = this.preview.getContext("2d");
+            if (!ctx) {
+                setText("debug-preview-time", "Canvas preview unavailable");
+                return;
+            }
+            if (this.preview.width !== frame.width)
+                this.preview.width = frame.width;
+            if (this.preview.height !== frame.height)
+                this.preview.height = frame.height;
+            ctx.putImageData(frame.buf, 0, 0);
+            this.preview.hidden = false;
+            this.changedAt = at;
+        }
+        this.previousFrame = frame;
+        this.previewAt = at;
+        setText("debug-preview-time", "Last sample ".concat(clock(at), " \u00B7 pixels changed ").concat(clock(this.changedAt)));
+    };
+    ChatDebug.prototype.record = function (poll) {
+        var _a, _b, _c;
+        var at = poll.at, frame = poll.frame, reader = poll.reader, lines = poll.lines, status = poll.status, error = poll.error;
+        var gap = this.lastPoll ? at - this.lastPoll : 0;
+        this.lastPoll = at;
+        this.longestGap = Math.max(this.longestGap, gap);
+        this.polls++;
+        if (gap > Math.max(2000, this.interval * 3)) {
+            this.savePreview("delayed poll");
+            this.event(at, "Poll gap ".concat((gap / 1000).toFixed(1), "s"));
+        }
+        if (error) {
+            if (error !== this.lastError)
+                this.event(at, error);
+            this.lastError = error;
+        }
+        else if (frame && this.lastError) {
+            this.event(at, "Chat read succeeded");
+            this.lastError = "";
+        }
+        if (poll.killsAdded)
+            this.event(at, "Kills recorded +".concat(poll.killsAdded));
+        if (frame)
+            this.sampleFrame(frame, at);
+        if (lines === null || lines === void 0 ? void 0 : lines.length) {
+            for (var _i = 0, lines_1 = lines; _i < lines_1.length; _i++) {
+                var line = lines_1[_i];
+                if (line.text.trim())
+                    this.ocr.push("".concat(clock(at), "  ").concat(line.text));
+            }
+            this.ocr = this.ocr.slice(-5);
+            if (this.ocr.length)
+                setText("debug-ocr", this.ocr.join("\n"));
+        }
+        setText("debug-status", status);
+        if (at - this.lastRender < 500)
+            return;
+        this.lastRender = at;
+        this.updatePollAge();
+        var box = (_a = reader === null || reader === void 0 ? void 0 : reader.pos) === null || _a === void 0 ? void 0 : _a.mainbox;
+        var rect = box === null || box === void 0 ? void 0 : box.rect;
+        var info = [
+            "Poll #".concat(this.polls, " at ").concat(clock(at), " \u00B7 target ").concat(this.interval, " ms"),
+            "Gap ".concat(gap, " ms \u00B7 longest ").concat(this.longestGap, " ms"),
+            "Plugin ".concat(document.hasFocus() ? "focused" : "unfocused", " \u00B7 page ").concat(document.visibilityState),
+            "Capture method ".concat(alt1.captureMethod || "unknown")
+        ];
+        if (alt1.rsLinked) {
+            info.push("Client ".concat(alt1.rsWidth, "\u00D7").concat(alt1.rsHeight, " at (").concat(alt1.rsX, ", ").concat(alt1.rsY, ")"));
+            info.push(alt1.permissionGameState ? "Game window ".concat(alt1.rsActive ? "active" : "inactive") : "Game focus unavailable");
+        }
+        else {
+            info.push(alt1.rsLinked === false ? "Client unlinked" : "Client link unknown");
+        }
+        if (rect) {
+            info.push("Chat (".concat(box.type, ") ").concat(rect.width, "\u00D7").concat(rect.height, " at (").concat(rect.x, ", ").concat(rect.y, ")"));
+            info.push("Font ".concat((_c = (_b = reader.font) === null || _b === void 0 ? void 0 : _b.name) !== null && _c !== void 0 ? _c : "unknown", " \u00B7 left edge ").concat(box.leftfound ? "found" : "unconfirmed"));
+        }
+        setText("debug-stats", info.join("\n"));
+    };
+    ChatDebug.prototype.close = function () {
+        window.removeEventListener("focus", this.focusChanged);
+        window.removeEventListener("blur", this.focusChanged);
+        document.removeEventListener("visibilitychange", this.focusChanged);
+        this.preview.hidden = true;
+        this.preview.width = this.saved.width = 0;
+        document.getElementById("debug-saved").hidden = true;
+        setText("debug-ocr", "");
+        setText("debug-events", "");
+    };
+    return ChatDebug;
+}());
+var chatDebug = null;
+function initChatDebug(interval) {
+    var toggle = document.getElementById("debug-chat-toggle");
+    var panel = document.getElementById("chat-debug-panel");
+    document.getElementById("chat-debug").hidden = false;
+    toggle.checked = false;
+    toggle.addEventListener("change", function () {
+        chatDebug === null || chatDebug === void 0 ? void 0 : chatDebug.close();
+        chatDebug = toggle.checked ? new ChatDebug(interval) : null;
+        panel.hidden = !toggle.checked;
+    });
+}
+
+
+/***/ },
+
 /***/ "./appconfig.json"
 /*!************************!*\
   !*** ./appconfig.json ***!
@@ -4283,6 +4483,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _icon_png__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./icon.png */ "./icon.png");
 /* harmony import */ var alt1_chatbox__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! alt1/chatbox */ "../node_modules/alt1/dist/chatbox/index.js");
 /* harmony import */ var alt1_chatbox__WEBPACK_IMPORTED_MODULE_4___default = /*#__PURE__*/__webpack_require__.n(alt1_chatbox__WEBPACK_IMPORTED_MODULE_4__);
+/* harmony import */ var _chat_debug__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./chat-debug */ "./chat-debug.ts");
 var __assign = (undefined && undefined.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -4303,6 +4504,7 @@ var __spreadArray = (undefined && undefined.__spreadArray) || function (to, from
     }
     return to.concat(ar || Array.prototype.slice.call(from));
 };
+
 
 
 
@@ -4417,6 +4619,7 @@ function startPeriodicUpdates() {
     setInterval(function () {
         updateKillsPerHour();
         updateTimerDisplay();
+        _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug === null || _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug === void 0 ? void 0 : _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug.updatePollAge();
     }, 600);
 }
 function logCompletionTime(tenths) {
@@ -4757,9 +4960,14 @@ function readChatbox() {
     function poll(atLaunch) {
         var _a;
         if (atLaunch === void 0) { atLaunch = false; }
+        var now = Date.now();
+        var killsBefore = killCount;
         var image = null;
+        var chatFrame = null;
+        var lines = null;
+        var status = "Searching for chatbox";
+        var diagnosticError = "";
         try {
-            var now = Date.now();
             if (now >= nextSearchAt) {
                 nextSearchAt = now + 1000;
                 var candidate = createChatReader();
@@ -4772,6 +4980,7 @@ function readChatbox() {
                     if (!reader)
                         throw error;
                     console.warn("Could not relocate chatbox", error);
+                    diagnosticError = "Chatbox search failed \u00B7 ".concat(error);
                 }
                 if (candidate.pos) {
                     var current = reader === null || reader === void 0 ? void 0 : reader.pos.mainbox;
@@ -4793,7 +5002,8 @@ function readChatbox() {
                 return;
             }
             reader.diffRead = !needsBaseline;
-            var lines = reader.read(image);
+            lines = reader.read(image);
+            chatFrame = reader.lastReadBuffer;
             var box = reader.pos.mainbox;
             if (openingFrame) {
                 // The first search can run before Alt1's chat templates have finished loading.
@@ -4805,6 +5015,8 @@ function readChatbox() {
             }
             var hasBody = lines === null || lines === void 0 ? void 0 : lines.some(function (line) { return line.text.replace(chatTimestamp, "").trim(); });
             if (!hasBody) {
+                status = !lines ? "Looking for chat font" :
+                    lines.length ? "Blank or timestamp-only OCR" : "No new chat lines";
                 // The pixels are captured even when Alt1 cannot identify the font yet.
                 if (reader.lastReadBuffer && (!earlierCapture || !sameChatbox(earlierCapture.box, box))) {
                     earlierCapture = { image: reader.lastReadBuffer, box: box };
@@ -4818,10 +5030,12 @@ function readChatbox() {
                 return;
             }
             if (needsBaseline) {
+                status = "Reading opening or recovered chat";
                 processFirstRead(reader, lines, previousTail, earlierCapture);
                 needsBaseline = false;
             }
             else {
+                status = "Reading new chat lines";
                 lines.forEach(function (line) { return processLine(line.text, false); });
             }
             earlierCapture = { image: reader.lastReadBuffer, box: box };
@@ -4829,10 +5043,27 @@ function readChatbox() {
         }
         catch (error) {
             console.warn("Could not capture chatbox", error);
+            status = "Chat capture failed";
+            diagnosticError = String(error);
             reader = null;
             nextSearchAt = Date.now() + 1000;
             if (image && !earlierCapture)
                 saveOpeningFrame(image);
+        }
+        finally {
+            try {
+                _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug === null || _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug === void 0 ? void 0 : _chat_debug__WEBPACK_IMPORTED_MODULE_5__.chatDebug.record({
+                    at: now,
+                    status: status,
+                    frame: chatFrame,
+                    reader: reader,
+                    lines: lines,
+                    error: diagnosticError, killsAdded: killCount - killsBefore
+                });
+            }
+            catch (error) {
+                console.warn("Could not update chat diagnostics", error);
+            }
         }
     }
     poll(true);
@@ -4855,6 +5086,7 @@ function main() {
     if (window.alt1) {
         alt1.identifyAppUrl("./appconfig.json");
         showWaitingMessage();
+        (0,_chat_debug__WEBPACK_IMPORTED_MODULE_5__.initChatDebug)(alt1.captureInterval);
         readChatbox();
         startPeriodicUpdates();
     }
